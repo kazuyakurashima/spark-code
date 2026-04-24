@@ -10,8 +10,7 @@ export default async function LessonPage({
   const { id } = await params;
   const lesson = getLesson(id);
   if (!lesson) notFound();
-  // Pass only the lesson id across the RSC boundary; the client component
-  // re-hydrates the full lesson object (which contains non-serializable
-  // match functions) by re-importing lessons.ts.
-  return <LessonWorkspace lessonId={lesson.id} />;
+  // `key` forces React to remount on lesson change so the workspace's
+  // `code` / `stepIndex` state can't leak across lessons.
+  return <LessonWorkspace key={lesson.id} lessonId={lesson.id} />;
 }

@@ -1,9 +1,10 @@
+// Client-safe lesson data. Answer keys and match logic live in
+// lib/lessons-server.ts ("server-only") so they never ship to the browser.
+
 export type LessonStep = {
   id: string;
   title: string;
   instruction: string;
-  match: (code: string) => boolean;
-  solution: string | null;
   hintDefault: string;
 };
 
@@ -42,7 +43,7 @@ export const lessons: Lesson[] = [
     id: 1,
     title: "名前を画面に表示しよう",
     overview:
-      "HTML の <h1> タグを使って、画面に自分の名前を表示します。これだけで、こんなに綺麗な画面が作れるよ。",
+      "HTML の `<h1>` タグを使って、画面に自分の名前を表示します。これだけで、こんなに綺麗な画面が作れるよ。",
     previewCss: LESSON_1_PREVIEW_CSS,
     steps: [
       {
@@ -50,8 +51,6 @@ export const lessons: Lesson[] = [
         title: "タグの基本形を書こう",
         instruction:
           "まずはタグの形に慣れよう。\n\nエディタに `<h1>名前</h1>` と書いてみて。\n\n`<h1>` が開始タグ、`</h1>` が終了タグ。その間に挟んだ文字(`名前`)が画面に表示されるよ。",
-        match: (code: string) => /<h1>\s*名前\s*<\/h1>/.test(code),
-        solution: "<h1>名前</h1>",
         hintDefault:
           "`<h1>` → `名前` → `</h1>` の順番で書くよ。間違えやすいのは `/` の向き。",
       },
@@ -60,13 +59,6 @@ export const lessons: Lesson[] = [
         title: "自分の名前に変えよう",
         instruction:
           "`名前` の部分を、あなた自身の名前に変えてみて。\n\n書き換えると、右のプレビューがリアルタイムで変わるのが見えるはず。コードと画面の関係を目で確かめてね。",
-        match: (code: string) => {
-          const m = code.match(/<h1>([\s\S]*?)<\/h1>/);
-          if (!m) return false;
-          const inner = m[1].trim();
-          return inner.length > 0 && inner !== "名前";
-        },
-        solution: "<h1>太郎</h1>",
         hintDefault:
           "`<h1>` と `</h1>` に挟まれた部分を、自分の名前に書き換えるだけで OK。",
       },
@@ -75,8 +67,6 @@ export const lessons: Lesson[] = [
         title: "完成!",
         instruction:
           "おめでとう!Lesson 1 クリアだ 🎉\n\n`<h1>` タグだけで、画面いっぱいの綺麗なデザインが作れたね。\n\n次のレッスン(色を変える・背景を装飾する など)は **Coming Soon**。お楽しみに!",
-        match: () => true,
-        solution: null,
         hintDefault: "",
       },
     ],

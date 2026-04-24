@@ -1,6 +1,41 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Lesson } from "@/lib/lessons";
+
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="rounded bg-slate-900/80 px-1.5 py-0.5 font-mono text-[0.85em] text-pink-300">
+      {children}
+    </code>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold text-white">{children}</strong>
+  ),
+  em: ({ children }: { children?: React.ReactNode }) => (
+    <em className="text-purple-300 not-italic font-medium">{children}</em>
+  ),
+  a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-pink-300 underline underline-offset-2"
+    >
+      {children}
+    </a>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="list-disc pl-5 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="list-decimal pl-5 space-y-1">{children}</ol>
+  ),
+};
 
 type Props = {
   lesson: Lesson;
@@ -35,6 +70,7 @@ export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
           return (
             <li
               key={step.id}
+              aria-current={state === "current" ? "step" : undefined}
               className={
                 state === "current"
                   ? "rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-500/15 to-pink-500/15 p-3 text-sm"
@@ -56,9 +92,14 @@ export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
         <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">
           今やること
         </p>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-          {currentStep.instruction}
-        </p>
+        <div className="text-sm text-slate-200">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={markdownComponents}
+          >
+            {currentStep.instruction}
+          </ReactMarkdown>
+        </div>
       </section>
 
       {!isLast && (
