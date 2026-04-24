@@ -1,6 +1,6 @@
 # SparkCode — プロジェクト概要
 
-> **Status**: MVP 実装前 / プラン確定段階(Codex レビュー 2 回目反映済み、実装フェーズ待ち)
+> **Status**: Phase 1 完了(第 1 段階:体験のコア / Codex レビュー 3 ラウンドで APPROVED)/ Phase 2 実装待ち
 > **最終更新**: 2026-04-25
 
 ---
@@ -266,11 +266,11 @@ ANTHROPIC_API_KEY=
 
 各ステップ終了時点で `npm run dev` で動作確認できる単位に切ってあります。
 
-1. **骨組み**: 依存 install → `.env.local` / `.env.local.example` 作成 → `.gitignore` 調整 → `globals.css` と `app/layout.tsx` のテーマ/フォント差し替え → `app/page.tsx` を `/lesson/1` へ redirect
-2. **レッスンデータ**: `lib/lessons.ts` に Lesson 1 の 3 ステップを定義(UI とロジックの手戻り防止のため先に固める)
-3. **3 ペインの静的レイアウト**: `app/lesson/[id]/page.tsx` + `components/ThreePaneLayout.tsx`(中身はプレースホルダ)
-4. **プレビュー**: `components/Preview.tsx` で iframe + srcdoc。空のエディタでもグラデ背景が見える状態を確認
-5. **コードエディタ**: `components/CodeEditor.tsx` で CodeMirror を配線。入力 → 親 state → Preview の srcdoc 更新まで通す
+1. **骨組み**: 依存 install → `.env.local` / `.env.local.example` 作成 → `.gitignore` 調整 → `globals.css` と `app/layout.tsx` のテーマ/フォント差し替え → `app/page.tsx` を `/lesson/1` へ redirect ✅ **Phase 1 完了**
+2. **レッスンデータ**: `lib/lessons.ts` に Lesson 1 の 3 ステップを定義(UI とロジックの手戻り防止のため先に固める) ✅ **Phase 1 完了**(Codex レビューで `match`/`solution` を `lib/lessons-server.ts` に server-only 隔離)
+3. **3 ペインの静的レイアウト**: `app/lesson/[id]/page.tsx` + `components/ThreePaneLayout.tsx`(中身はプレースホルダ) ✅ **Phase 1 完了**
+4. **プレビュー**: `components/Preview.tsx` で iframe + srcdoc。空のエディタでもグラデ背景が見える状態を確認 ✅ **Phase 1 完了**
+5. **コードエディタ**: `components/CodeEditor.tsx` で CodeMirror を配線。入力 → 親 state → Preview の srcdoc 更新まで通す ✅ **Phase 1 完了**
    - **← ここで「書けば見た目が変わる」MVP の核が完成(体験の 80%)**
 6. **レッスンパネル**: `components/LessonPanel.tsx` で Markdown 描画 + 現在ステップのハイライト + 手動「次へ」ボタン(AI 判定なしで動作確認)
 7. **Route Handler の骨**: `app/api/chat/route.ts` で 4 タイプすべてスタブ応答 → クライアントから POST できることを確認
@@ -295,10 +295,27 @@ ANTHROPIC_API_KEY=
 | 9 | `.env.local` 編集後に反映されない | `npm run dev` を**再起動**。Next.js は起動時にしか読まない |
 | 10 | Haiku のレート上限に開発中ぶつかる | 一次正規表現で弾けるケースは API を呼ばない。自動連打を作らない |
 | 11 | 日本語文字化け | Route Handler は `Response.json()` で UTF-8 自動。HTML プレビューは `<meta charset="utf-8">` を srcdoc 冒頭に固定で入れる |
+| 12 | 判定データ(`match`/`solution`)がクライアントバンドルに漏洩 | [lib/lessons.ts](../lib/lessons.ts)(public)と [lib/lessons-server.ts](../lib/lessons-server.ts)(server-only)に分離。後者に `import "server-only"` を付けてクライアントへの誤 import をビルドエラーにする。**Phase 1 の Codex レビューで検出** |
+| 13 | `lessonId` 変更時に `LessonWorkspace` の state が leak する(次レッスンが短かったら crash 可能性) | `app/lesson/[id]/page.tsx` で `<LessonWorkspace key={lesson.id} ... />` として強制 remount。**Phase 1 の Codex レビューで検出** |
+| 14 | Markdown 記法(`` `code` ``・`**bold**` など)が raw で描画される | [components/LessonPanel.tsx](../components/LessonPanel.tsx) で `react-markdown` + `remark-gfm` + `components` マップ(`<code>` / `<strong>` などを dark テーマに合わせる)。**`instruction` だけでなく `overview` も同じ経路に通す**(Phase 1 round 2 で拾った regression)|
 
 ---
 
-## 13. 完成判定(MVP が動いたと言える条件)
+## 13. 完成判定
+
+### Phase 1 の完成判定(達成済み)
+
+第 1 段階「体験のコア」が動く状態の完成条件。**すべて達成済み**。
+
+1. ✅ `npm install && npm run dev` で http://localhost:3000 が `/lesson/1` にリダイレクト
+2. ✅ 3 ペイン表示(左: レッスン説明 / 中: エディタ / 右上: プレビュー / 右下: チャットプレースホルダ)
+3. ✅ エディタが空でもプレビューにグラデ背景が見える(プリセット CSS が効いている)
+4. ✅ エディタに `<h1>` を入力するとプレビューに即反映(`code` state → iframe srcDoc)
+5. ✅ iframe に `sandbox=""`(値は空文字 = 最小権限)が付いている
+6. ✅ [lib/lessons.ts](../lib/lessons.ts)(public データ)と [lib/lessons-server.ts](../lib/lessons-server.ts)(`import "server-only"` による判定データ隔離)に型付き定義が揃っている
+7. ✅ 手動の「次へ」ボタンで仮動作(`// TODO: 第2段階で AI 判定に差し替え` コメント付き)
+
+### MVP 全体の完成判定(Phase 2 完了時点ですべて満たす)
 
 1. `npm install && npm run dev` → http://localhost:3000 が `/lesson/1` にリダイレクト
 2. エディタが空でも、右上プレビューにグラデ背景が見える(プリセット CSS が効いている)
@@ -332,6 +349,7 @@ ANTHROPIC_API_KEY=
 - `previewCss` はステップではなくレッスン単位で持つ(CSS は学習者が触らない範囲で徐々に豪華にしていく)
 - チャット履歴はメモリ(`useState`)のみ。永続化するなら localStorage → Supabase の順で段階追加
 - **多ターン対話対応**: MVP は `question` を単発リクエストで送るが、Phase 2 で会話履歴を API に送る多ターン対話に拡張する。その際に破壊的変更が出ないよう、`lib/prompts.ts` のシグネチャを将来 `messages: Message[]` 形式を受け取れる形で設計しておくと良い(※必須ではない)
+- **Codex レビュースクリプト**: Phase 1 で [scripts/codex-review.sh](../scripts/codex-review.sh) と [scripts/review-schema.json](../scripts/review-schema.json) を配置済み(`/codex-review` スキルから自動コピー)。`PRIMARY_MODEL`/`FALLBACK_MODEL` は利用可能なモデル(当環境では `gpt-5.4`)に差し替え済み。運用上の既知の摩擦として、セキュリティフィルタが `.env.local.example` を false positive で弾くので、レビュー直前に `git restore --staged .env.local.example` を挟む必要がある(将来的には `scripts/codex-review.sh` のパターンを `\.env\.(?!local\.example)` に絞る改修で解消できる)
 - デプロイ(Vercel)・認証・進捗保存は MVP 後の別フェーズ
 
 ---
