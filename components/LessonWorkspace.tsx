@@ -5,6 +5,7 @@ import type { Lesson } from "@/lib/lessons";
 import { ThreePaneLayout } from "./ThreePaneLayout";
 import { LessonPanel } from "./LessonPanel";
 import { ChatPanel } from "./ChatPanel";
+import { Preview } from "./Preview";
 
 export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
   const [code, setCode] = useState("");
@@ -15,21 +16,14 @@ export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
     setStepIndex((i) => Math.min(i + 1, lesson.steps.length - 1));
   };
 
-  // Step 5 までの繋ぎ: 入力・プレビューはプレースホルダで置いておく
+  // Step 5 までの繋ぎ: コードエディタはプレースホルダ
   const centerPlaceholder = (
     <div className="h-full grid place-items-center text-slate-600 text-sm">
       コードエディタ(Step 5 で実装)
     </div>
   );
-  const rightTopPlaceholder = (
-    <div className="h-full grid place-items-center text-slate-600 text-sm bg-slate-900/50">
-      プレビュー(Step 4 で実装)
-    </div>
-  );
 
-  // Reference `code`/`setCode` so the variables stay useful for later steps
-  // and TypeScript doesn't flag them as unused.
-  void code;
+  // `setCode` は Step 5 の CodeEditor から書き込まれる
   void setCode;
 
   return (
@@ -42,7 +36,7 @@ export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
         />
       }
       center={centerPlaceholder}
-      rightTop={rightTopPlaceholder}
+      rightTop={<Preview code={code} previewCss={lesson.previewCss} />}
       rightBottom={<ChatPanel />}
     />
   );
