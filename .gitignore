@@ -32,6 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
+
+# Codex review loop transient files
+.codex-review.json
+.codex-review-raw.txt
+.codex-review-prev.json
 
 # vercel
 .vercel
