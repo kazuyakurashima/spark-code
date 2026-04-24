@@ -54,9 +54,14 @@ export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
           Lesson {lesson.id}
         </p>
         <h1 className="text-2xl font-bold leading-snug">{lesson.title}</h1>
-        <p className="mt-3 text-sm text-slate-400 leading-relaxed">
-          {lesson.overview}
-        </p>
+        <div className="mt-3 text-sm text-slate-400">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={markdownComponents}
+          >
+            {lesson.overview}
+          </ReactMarkdown>
+        </div>
       </header>
 
       <ol className="space-y-2">
