@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import type { Lesson } from "@/lib/lessons";
+import { getLesson } from "@/lib/lessons";
 import { ThreePaneLayout } from "./ThreePaneLayout";
 import { LessonPanel } from "./LessonPanel";
 import { ChatPanel } from "./ChatPanel";
 import { Preview } from "./Preview";
+import { CodeEditor } from "./CodeEditor";
 
-export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
+export function LessonWorkspace({ lessonId }: { lessonId: number }) {
+  const lesson = getLesson(lessonId);
+  if (!lesson) {
+    // Server already validated; this branch is defensive and should not fire.
+    throw new Error(`Lesson ${lessonId} not found`);
+  }
   const [code, setCode] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
 
@@ -15,16 +21,6 @@ export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
   const handleNext = () => {
     setStepIndex((i) => Math.min(i + 1, lesson.steps.length - 1));
   };
-
-  // Step 5 までの繋ぎ: コードエディタはプレースホルダ
-  const centerPlaceholder = (
-    <div className="h-full grid place-items-center text-slate-600 text-sm">
-      コードエディタ(Step 5 で実装)
-    </div>
-  );
-
-  // `setCode` は Step 5 の CodeEditor から書き込まれる
-  void setCode;
 
   return (
     <ThreePaneLayout
@@ -35,7 +31,7 @@ export function LessonWorkspace({ lesson }: { lesson: Lesson }) {
           onNext={handleNext}
         />
       }
-      center={centerPlaceholder}
+      center={<CodeEditor value={code} onChange={setCode} />}
       rightTop={<Preview code={code} previewCss={lesson.previewCss} />}
       rightBottom={<ChatPanel />}
     />

@@ -10,5 +10,8 @@ export default async function LessonPage({
   const { id } = await params;
   const lesson = getLesson(id);
   if (!lesson) notFound();
-  return <LessonWorkspace lesson={lesson} />;
+  // Pass only the lesson id across the RSC boundary; the client component
+  // re-hydrates the full lesson object (which contains non-serializable
+  // match functions) by re-importing lessons.ts.
+  return <LessonWorkspace lessonId={lesson.id} />;
 }
