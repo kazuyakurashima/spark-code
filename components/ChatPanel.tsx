@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "@/types/chat";
 
+const QUESTION_MAX_LENGTH = 500;
+
 type Props = {
   messages: ChatMessage[];
   onHint: () => void;
@@ -146,23 +148,46 @@ export function ChatPanel({
           e.preventDefault();
           submit();
         }}
-        className="border-t border-slate-800/80 p-3 flex gap-2"
+        className="border-t border-slate-800/80 p-3 flex flex-col gap-2"
       >
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="先生に質問してみよう…"
-          disabled={isAsking}
-          className="flex-1 rounded-lg bg-slate-800/80 border border-slate-700/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={!canSend}
-          className="rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+        <div className="flex gap-2 items-end">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter to send (Shift+Enter / IME composition still inserts a newline).
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing
+              ) {
+                e.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="先生に質問してみよう…(Enter で送信、Shift+Enter で改行)"
+            rows={2}
+            disabled={isAsking}
+            maxLength={QUESTION_MAX_LENGTH}
+            className="flex-1 resize-none rounded-lg bg-slate-800/80 border border-slate-700/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-60"
+          />
+          <button
+            type="submit"
+            disabled={!canSend}
+            className="rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+          >
+            {isAsking ? "送信中…" : "送信"}
+          </button>
+        </div>
+        <p
+          className={`text-[0.65rem] text-right ${
+            draft.length > QUESTION_MAX_LENGTH * 0.9
+              ? "text-amber-400"
+              : "text-slate-500"
+          }`}
         >
-          {isAsking ? "送信中…" : "送信"}
-        </button>
+          {draft.length} / {QUESTION_MAX_LENGTH}
+        </p>
       </form>
     </div>
   );
