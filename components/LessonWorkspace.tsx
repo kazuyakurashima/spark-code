@@ -247,6 +247,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           onAsk={handleQuestion}
           isHinting={busy === "hint"}
           isAsking={busy === "question"}
+          isBusy={busy !== null}
           disableHint={isLastStep}
         />
       }

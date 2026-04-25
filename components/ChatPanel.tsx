@@ -13,6 +13,12 @@ type Props = {
   onAsk: (question: string) => void;
   isHinting: boolean;
   isAsking: boolean;
+  /**
+   * True while *any* AI flow (judge / hint / question) is in flight.
+   * The chat surface gates all inputs on this so the learner can't queue
+   * up extra requests that would silently get dropped by the workspace.
+   */
+  isBusy: boolean;
   disableHint?: boolean;
 };
 
@@ -76,6 +82,7 @@ export function ChatPanel({
   onAsk,
   isHinting,
   isAsking,
+  isBusy,
   disableHint = false,
 }: Props) {
   const [draft, setDraft] = useState("");
@@ -88,7 +95,7 @@ export function ChatPanel({
   }, [messages.length]);
 
   const trimmedDraft = draft.trim();
-  const canSend = trimmedDraft.length > 0 && !isAsking;
+  const canSend = trimmedDraft.length > 0 && !isBusy;
 
   const submit = () => {
     if (!canSend) return;
@@ -105,9 +112,15 @@ export function ChatPanel({
         <button
           type="button"
           onClick={onHint}
-          disabled={isHinting || disableHint}
-          className="text-xs px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-500/40 text-sky-200 transition hover:bg-sky-500/25 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
-          title={disableHint ? "完了済みのレッスンではヒントは不要です" : ""}
+          disabled={isBusy || disableHint}
+          className="text-xs px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-500/40 text-sky-200 transition hover:bg-sky-500/25 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+          title={
+            disableHint
+              ? "完了済みのレッスンではヒントは不要です"
+              : isBusy && !isHinting
+                ? "別の処理が進行中です…"
+                : ""
+          }
         >
           {isHinting ? "考え中…" : "💡 ヒントが欲しい"}
         </button>
@@ -184,11 +197,15 @@ export function ChatPanel({
                 submit();
               }
             }}
-            placeholder="先生に質問してみよう…(Enter で送信、Shift+Enter で改行)"
+            placeholder={
+              isBusy
+                ? "先生が考え中…"
+                : "先生に質問してみよう…(Enter で送信、Shift+Enter で改行)"
+            }
             rows={2}
-            disabled={isAsking}
+            disabled={isBusy}
             maxLength={QUESTION_MAX_LENGTH}
-            className="flex-1 resize-none rounded-lg bg-slate-800/80 border border-slate-700/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-60"
+            className="flex-1 resize-none rounded-lg bg-slate-800/80 border border-slate-700/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60 disabled:opacity-60 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
