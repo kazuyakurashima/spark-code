@@ -124,7 +124,10 @@ export function ChatPanel({
           </div>
         ) : (
           messages.map((m) => (
-            <div key={m.id} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+            <div
+              key={m.id}
+              className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
+            >
               {bubbleLabel(m) && (
                 <span className="text-[0.65rem] uppercase tracking-widest text-slate-500 mb-0.5 px-1">
                   {bubbleLabel(m)}
@@ -140,6 +143,18 @@ export function ChatPanel({
               </div>
             </div>
           ))
+        )}
+        {(isHinting || isAsking) && (
+          <div className="flex items-start">
+            <div className="rounded-xl px-3 py-2 bg-slate-800/60 border border-slate-700/40 text-slate-400 text-sm flex items-center gap-2">
+              <span className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+              </span>
+              <span>先生が考え中…</span>
+            </div>
+          </div>
         )}
       </div>
 

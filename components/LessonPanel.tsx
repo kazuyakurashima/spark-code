@@ -127,8 +127,16 @@ export function LessonPanel({
       )}
 
       {isLast && (
-        <div className="mt-auto rounded-xl border border-dashed border-slate-700 p-4 text-center text-sm text-slate-400">
-          Lesson 2 は Coming Soon 🚧
+        <div className="mt-auto rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-pink-500/15 p-5 text-center">
+          <p className="text-2xl mb-2">🎉</p>
+          <p className="text-sm font-semibold text-white mb-1">
+            Lesson 1 クリア!
+          </p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            次のレッスン(色を変える / 背景を装飾する など)は{" "}
+            <span className="font-semibold text-pink-300">Coming Soon</span>
+            。お楽しみに!
+          </p>
         </div>
       )}
     </div>

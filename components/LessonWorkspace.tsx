@@ -49,6 +49,17 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
 
   const handleJudge = useCallback(async () => {
     if (busy || isLastStep) return;
+    // Empty-code guard: skip the round trip and surface a friendly nudge.
+    if (code.trim().length === 0) {
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content:
+          "まずはエディタにコードを書いてみよう。書けたら「次のステップへ」を押してね。",
+      });
+      return;
+    }
     setBusy("judge");
     try {
       const resp = await callChat({
@@ -110,6 +121,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   // Step 9 will wire these to ChatPanel; defining them now keeps the API stable.
   const handleHint = useCallback(async () => {
     if (busy) return;
+    if (isLastStep) return;
     setBusy("hint");
     try {
       const resp = await callChat({
@@ -142,7 +154,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, currentStep.id, code, appendMessage]);
+  }, [busy, isLastStep, currentStep.id, code, appendMessage]);
 
   const handleQuestion = useCallback(
     async (question: string) => {
