@@ -1,6 +1,6 @@
 # SparkCode — プロジェクト概要
 
-> **Status**: Phase 1 完了(第 1 段階:体験のコア / Codex レビュー 3 ラウンドで APPROVED)/ Phase 2 実装待ち
+> **Status**: Phase 2 完了(MVP 全体実装完了 / Codex レビュー Phase 1 3 ラウンド + Phase 2 3 ラウンドで APPROVED)/ 動作確認・拡張フェーズ
 > **最終更新**: 2026-04-25
 
 ---
@@ -272,11 +272,11 @@ ANTHROPIC_API_KEY=
 4. **プレビュー**: `components/Preview.tsx` で iframe + srcdoc。空のエディタでもグラデ背景が見える状態を確認 ✅ **Phase 1 完了**
 5. **コードエディタ**: `components/CodeEditor.tsx` で CodeMirror を配線。入力 → 親 state → Preview の srcdoc 更新まで通す ✅ **Phase 1 完了**
    - **← ここで「書けば見た目が変わる」MVP の核が完成(体験の 80%)**
-6. **レッスンパネル**: `components/LessonPanel.tsx` で Markdown 描画 + 現在ステップのハイライト + 手動「次へ」ボタン(AI 判定なしで動作確認)
-7. **Route Handler の骨**: `app/api/chat/route.ts` で 4 タイプすべてスタブ応答 → クライアントから POST できることを確認
-8. **AI 結線 その 1**: `judge` を本実装。**正規表現を source of truth** にして一次判定(Step 1-2 は §2 の 3 条件)→ 通ったら Claude Haiku でゆるく追認(**不合格扱いはしない・メッセージのみ添える**)→ 別途 `praise` を 1 往復(best-effort、失敗しても進行は確定・デフォルト褒め文言でフォールバック)
-9. **AI 結線 その 2**: `hint` ボタンと `question` フォームを `components/ChatPanel.tsx` に実装、履歴表示
-10. **仕上げ**: Step 1-3 の「Coming Soon」、エラー状態(API 失敗・ネット断)、ローディング、hover マイクロアニメ、空入力ガード
+6. **レッスンパネル**: `components/LessonPanel.tsx` で Markdown 描画 + 現在ステップのハイライト + AI 判定による「次へ」 ✅ **Phase 2 完了**
+7. **Route Handler の骨**: `app/api/chat/route.ts` で 4 タイプすべてスタブ応答 → クライアントから POST できることを確認 ✅ **Phase 2 完了**
+8. **AI 結線 その 1**: `judge` を本実装。**正規表現を source of truth** にして一次判定(Step 1-2 は §2 の 3 条件)→ 通ったら Claude Haiku でゆるく追認(**不合格扱いはしない・メッセージのみ添える**)→ 別途 `praise` を 1 往復(best-effort、失敗しても進行は確定・デフォルト褒め文言でフォールバック)✅ **Phase 2 完了**
+9. **AI 結線 その 2**: `hint` ボタンと `question` フォームを `components/ChatPanel.tsx` に実装、履歴表示(textarea + Enter 送信 + 文字数カウンタ + busy 中は入力抑止)✅ **Phase 2 完了**
+10. **仕上げ**: Step 1-3 の「Coming Soon」、エラー状態(API 失敗・ネット断)、ローディング、hover マイクロアニメ、空入力ガード ✅ **Phase 2 完了**
 
 ---
 
@@ -298,6 +298,12 @@ ANTHROPIC_API_KEY=
 | 12 | 判定データ(`match`/`solution`)がクライアントバンドルに漏洩 | [lib/lessons.ts](../lib/lessons.ts)(public)と [lib/lessons-server.ts](../lib/lessons-server.ts)(server-only)に分離。後者に `import "server-only"` を付けてクライアントへの誤 import をビルドエラーにする。**Phase 1 の Codex レビューで検出** |
 | 13 | `lessonId` 変更時に `LessonWorkspace` の state が leak する(次レッスンが短かったら crash 可能性) | `app/lesson/[id]/page.tsx` で `<LessonWorkspace key={lesson.id} ... />` として強制 remount。**Phase 1 の Codex レビューで検出** |
 | 14 | Markdown 記法(`` `code` ``・`**bold**` など)が raw で描画される | [components/LessonPanel.tsx](../components/LessonPanel.tsx) で `react-markdown` + `remark-gfm` + `components` マップ(`<code>` / `<strong>` などを dark テーマに合わせる)。**`instruction` だけでなく `overview` も同じ経路に通す**(Phase 1 round 2 で拾った regression)|
+| 15 | hint / question プロンプトが `stepId` だけだとモデルが文脈を持てず ungrounded(レッスンと無関係なヒント・誤答が出やすい) | [lib/lessons.ts](../lib/lessons.ts) に `getStep(stepId)` を追加 →  [lib/prompts.ts](../lib/prompts.ts) の `stepContext()` ヘルパでレッスン名・ステップタイトル・指示文を全 4 タイプの user プロンプトに注入。**Phase 2 の Codex レビューで検出** |
+| 16 | サーバ側にサイズ上限がないと **直接 POST**(curl 等)で巨大入力を Anthropic に流せる(コスト・レート上限の事故源) | [app/api/chat/route.ts](../app/api/chat/route.ts) で `MAX_CODE_LENGTH=10000` / `MAX_QUESTION_LENGTH=500` / `MAX_STEP_ID_LENGTH=32`、超過時 typed 413 を返す。**Phase 2 の Codex レビューで検出** |
+| 17 | サーバ caps をクライアント上限より**緩く**設定すると、501–1000 文字のような「クライアント UI を通れないが直 POST で通る」穴ができる | サーバ caps はクライアント実上限と**完全一致**させる(`MAX_QUESTION_LENGTH=500` ↔ textarea の `maxLength=500`)。コードコメントに「must match the client surface」を明記して再発防止。**Phase 2 round 2 で拾った regression** |
+| 18 | `callChat()` が `res.json() as ChatResponse` で blind cast すると、proxy / 5xx の異形 JSON を受け入れて undefined を画面に出す | [components/LessonWorkspace.tsx](../components/LessonWorkspace.tsx) に `isChatResponse()` runtime guard を追加(type 判別 + `message: string` + `judge.correct: boolean`)。guard 失敗で throw → UI ではエラーバブルに変換。**Phase 2 の Codex レビューで検出** |
+| 19 | Anthropic SDK の `resp.content` は `text` / `thinking` / `tool_use` 等の union 型。`(b): b is {type:"text",text:string} =>` のような type predicate を直接書くと、SDK 内の `TextBlock` の `citations` 必須フィールドが欠けて TS2677 | [lib/anthropic.ts](../lib/anthropic.ts) では `.map(b => b.type === "text" ? b.text : "").join("")` のフォールバック実装で union を畳む(predicate を書かない)|
+| 20 | judge / hint / question の API 呼び出し中も入力 UI が押せると、クリックは届くが workspace 側で握り潰され「無反応」と感じる | [components/ChatPanel.tsx](../components/ChatPanel.tsx) に `isBusy: boolean` prop を追加し、textarea / 送信ボタン / ヒントボタンの **3 要素すべて** を disable。busy 中は placeholder を「先生が考え中…」に切り替え。busy 解除で自動復帰。**Phase 2 後追いレビューで検出** |
 
 ---
 
@@ -315,7 +321,9 @@ ANTHROPIC_API_KEY=
 6. ✅ [lib/lessons.ts](../lib/lessons.ts)(public データ)と [lib/lessons-server.ts](../lib/lessons-server.ts)(`import "server-only"` による判定データ隔離)に型付き定義が揃っている
 7. ✅ 手動の「次へ」ボタンで仮動作(`// TODO: 第2段階で AI 判定に差し替え` コメント付き)
 
-### MVP 全体の完成判定(Phase 2 完了時点ですべて満たす)
+### MVP 全体の完成判定(達成済み)
+
+Phase 2 完了時点ですべて満たす。**全項目達成済み**(下記 Phase 2 セルフチェックを参照)。
 
 1. `npm install && npm run dev` → http://localhost:3000 が `/lesson/1` にリダイレクト
 2. エディタが空でも、右上プレビューにグラデ背景が見える(プリセット CSS が効いている)
@@ -327,6 +335,19 @@ ANTHROPIC_API_KEY=
 8. 下段チャット欄から自由質問に優しい日本語で回答が返る
 9. DevTools Network タブで `/api/chat` レスポンスに API キーが含まれていない
 10. `git status` で `.env.local` が untracked にも上がっていない
+
+### Phase 2 セルフチェック(達成済み)
+
+Phase 2 のスコープ(AI 結線・チャット UI・仕上げ)に対するセルフチェック。**全項目達成済み**。
+
+1. ✅ Step 1-1 で `<h1>名前</h1>` を書くと judge が「正解!」と返し、コードに即した具体的な褒めが表示される(curl 検証済 → "完璧です！h1タグで大見出しを作れていますね。")
+2. ✅ Step 1-2 で名前を変えずに進もうとすると AI が惜しい指摘(regex で先に弾き、デフォルト「おしい!…」を返す)
+3. ✅ Step 1-2 で自分の名前に変えると合格、Step 1-3 の Coming Soon に遷移(`setStepIndex` で前進、最終 step は 🎉 + グラデーションの celebrate panel)
+4. ✅ 任意のステップで「ヒント」ボタンが機能(プロンプトに「直接の解答は禁止」を明示、grounded な気づきを返す)
+5. ✅ 自由質問に優しい日本語で返答(grounded:現在のレッスン/ステップ/instruction/コードを context として注入)
+6. ✅ DevTools Network タブで `/api/chat` レスポンスに API キー無し(`server-only` 経由で server-side のみ)
+7. ✅ API 失敗時にエラー表示(白画面にならない / `isChatResponse` guard + try/catch でチャットの rose エラーバブルに変換)
+8. ✅ Step 1-2 のエッジケース全パターン期待通り(curl で全 4 件確認:`<h1>かず</h1>` 合格 / `<h1>名前</h1>` 不合格 / `<h1></h1>` 不合格 / `<h1> かず </h1>` 合格)
 
 ### Step 1-2 判定のエッジケーステスト
 
@@ -349,7 +370,9 @@ ANTHROPIC_API_KEY=
 - `previewCss` はステップではなくレッスン単位で持つ(CSS は学習者が触らない範囲で徐々に豪華にしていく)
 - チャット履歴はメモリ(`useState`)のみ。永続化するなら localStorage → Supabase の順で段階追加
 - **多ターン対話対応**: MVP は `question` を単発リクエストで送るが、Phase 2 で会話履歴を API に送る多ターン対話に拡張する。その際に破壊的変更が出ないよう、`lib/prompts.ts` のシグネチャを将来 `messages: Message[]` 形式を受け取れる形で設計しておくと良い(※必須ではない)
-- **Codex レビュースクリプト**: Phase 1 で [scripts/codex-review.sh](../scripts/codex-review.sh) と [scripts/review-schema.json](../scripts/review-schema.json) を配置済み(`/codex-review` スキルから自動コピー)。`PRIMARY_MODEL`/`FALLBACK_MODEL` は利用可能なモデル(当環境では `gpt-5.4`)に差し替え済み。運用上の既知の摩擦として、セキュリティフィルタが `.env.local.example` を false positive で弾くので、レビュー直前に `git restore --staged .env.local.example` を挟む必要がある(将来的には `scripts/codex-review.sh` のパターンを `\.env\.(?!local\.example)` に絞る改修で解消できる)
+- **Codex レビュースクリプト**: Phase 1 で [scripts/codex-review.sh](../scripts/codex-review.sh) と [scripts/review-schema.json](../scripts/review-schema.json) を配置済み(`/codex-review` スキルから自動コピー)。`PRIMARY_MODEL`/`FALLBACK_MODEL` は利用可能なモデル(当環境では `gpt-5.4`)に差し替え済み。Phase 2 で secret パターンを `=` 必須に絞り込み(`ANTHROPIC_API_KEY` 等の env 参照を bare 名で flag していた false positive を解消)。残課題: `.env.local.example` のファイル名 false positive(レビュー直前に `git restore --staged .env.local.example` で除外)— 将来的に `scripts/codex-review.sh` の SENSITIVE_PATTERNS を `\.env\.(?!local\.example)` に絞れば解消
+- **Codex CLI のバージョン管理**: Phase 2 のレビュー中、サーバ側が `gpt-5.4` 用に新 CLI を要求 → CLI 0.44.0 → 0.125.0 にアップデート(`npm install -g @openai/codex`)。今後 OpenAI 側のモデル更新で同様の要求が来る可能性があるので、レビューで HTTP 400 が出たらまず CLI バージョンを疑う運用に
+- **runtime validation の共有スキーマ化**: 現状 [app/api/chat/route.ts](../app/api/chat/route.ts) の `isValidRequest`(server)と [components/LessonWorkspace.tsx](../components/LessonWorkspace.tsx) の `isChatResponse`(client)を**手書きで二重定義**している。Phase 3 以降で Zod / Valibot による共有スキーマ + 自動推論に置き換える候補(MVP 範囲では過剰なため敢えて見送り)
 - デプロイ(Vercel)・認証・進捗保存は MVP 後の別フェーズ
 
 ---
