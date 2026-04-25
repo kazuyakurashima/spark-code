@@ -65,8 +65,27 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           content: resp.message,
         });
         if (resp.correct) {
-          // Step 8: praise lands here as a separate best-effort call.
+          // Advance the step immediately. praise is best-effort: judge is the
+          // source of truth, so a praise failure must NOT roll back progress.
+          const judgedStepId = currentStep.id;
+          const judgedCode = code;
           setStepIndex((i) => Math.min(i + 1, lesson.steps.length - 1));
+          callChat({ type: "praise", stepId: judgedStepId, code: judgedCode })
+            .then((praiseResp) => {
+              if (praiseResp.type === "praise") {
+                appendMessage({
+                  id: newId(),
+                  role: "assistant",
+                  kind: "praise",
+                  content: praiseResp.message,
+                });
+              }
+              // Silently swallow other shapes; default praise was already
+              // delivered through the judge message bubble.
+            })
+            .catch((err) => {
+              console.warn("[chat] praise failed:", err);
+            });
         }
       } else {
         appendMessage({
