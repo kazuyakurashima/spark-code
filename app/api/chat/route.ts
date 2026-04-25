@@ -13,10 +13,12 @@ import type { ChatRequest, ChatResponse } from "@/types/chat";
 // Anthropic SDK uses Node APIs, so keep this on the Node runtime.
 export const runtime = "nodejs";
 
-// Server-side payload caps. The textarea also enforces 500 on `question`,
-// but a direct POST can bypass that, so we re-check here.
+// Server-side payload caps. Must match the values the client surface
+// enforces — the textarea caps `question` at 500, so the server caps at 500
+// too. Anything tighter than the client UI lets through is a footgun;
+// anything looser silently allows direct-POST bypass.
 const MAX_CODE_LENGTH = 10_000;
-const MAX_QUESTION_LENGTH = 1_000;
+const MAX_QUESTION_LENGTH = 500;
 const MAX_STEP_ID_LENGTH = 32;
 
 /** Lightweight runtime guard so a malformed body produces a typed 400. */

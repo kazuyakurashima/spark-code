@@ -15,6 +15,23 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function isChatResponse(value: unknown): value is ChatResponse {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.message !== "string") return false;
+  switch (v.type) {
+    case "judge":
+      return typeof v.correct === "boolean";
+    case "hint":
+    case "praise":
+    case "question":
+    case "error":
+      return true;
+    default:
+      return false;
+  }
+}
+
 async function callChat(body: object): Promise<ChatResponse> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -22,13 +39,19 @@ async function callChat(body: object): Promise<ChatResponse> {
     body: JSON.stringify(body),
   });
   // /api/chat always tries to return a typed JSON body — including on 4xx/5xx.
-  // Prefer the server's message; fall back to the status code only when the
-  // body is missing or unparseable (network drops, opaque proxies, etc.).
+  // Prefer the server's message, but only after we've verified the shape:
+  // an upstream proxy or framework error could return a JSON payload that
+  // doesn't match our wire format.
+  let parsed: unknown;
   try {
-    return (await res.json()) as ChatResponse;
+    parsed = await res.json();
   } catch {
     throw new Error(`HTTP ${res.status} (no JSON body)`);
   }
+  if (!isChatResponse(parsed)) {
+    throw new Error(`HTTP ${res.status} (unexpected response shape)`);
+  }
+  return parsed;
 }
 
 export function LessonWorkspace({ lessonId }: { lessonId: number }) {
