@@ -40,10 +40,16 @@ const markdownComponents = {
 type Props = {
   lesson: Lesson;
   currentStepIndex: number;
-  onNext: () => void;
+  onJudge: () => void;
+  isJudging: boolean;
 };
 
-export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
+export function LessonPanel({
+  lesson,
+  currentStepIndex,
+  onJudge,
+  isJudging,
+}: Props) {
   const currentStep = lesson.steps[currentStepIndex];
   const isLast = currentStepIndex === lesson.steps.length - 1;
 
@@ -80,14 +86,16 @@ export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
                 state === "current"
                   ? "rounded-xl border border-purple-500/50 bg-gradient-to-r from-purple-500/15 to-pink-500/15 p-3 text-sm"
                   : state === "done"
-                    ? "rounded-xl border border-transparent p-3 text-sm text-slate-500"
+                    ? "rounded-xl border border-transparent p-3 text-sm text-emerald-400"
                     : "rounded-xl border border-transparent p-3 text-sm text-slate-600"
               }
             >
               <span className="font-mono text-xs opacity-70 mr-2">
-                Step {step.id}
+                {state === "done" ? "✓" : `Step ${step.id}`}
               </span>
-              {step.title}
+              <span className={state === "done" ? "line-through opacity-70" : ""}>
+                {step.title}
+              </span>
             </li>
           );
         })}
@@ -110,11 +118,11 @@ export function LessonPanel({ lesson, currentStepIndex, onNext }: Props) {
       {!isLast && (
         <button
           type="button"
-          onClick={onNext}
-          className="mt-auto rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
+          onClick={onJudge}
+          disabled={isJudging}
+          className="mt-auto rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40 disabled:opacity-60 disabled:cursor-progress disabled:hover:translate-y-0"
         >
-          {/* TODO: 第2段階で AI 判定(judge)に差し替え。今は手動で進む。 */}
-          次のステップへ
+          {isJudging ? "判定中…" : "次のステップへ"}
         </button>
       )}
 
