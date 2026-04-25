@@ -115,6 +115,10 @@ export function ChatPanel({
 
       <div
         ref={scrollerRef}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label="先生とのチャット履歴"
         className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2"
       >
         {messages.length === 0 ? (

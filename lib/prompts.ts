@@ -1,6 +1,24 @@
 import "server-only";
 
+import { getStep } from "./lessons";
 import { getSolution } from "./lessons-server";
+
+/**
+ * Compact, prompt-friendly summary of the current step. Sent into every
+ * builder so Claude's responses are grounded in the actual lesson content
+ * rather than guessing from `stepId` alone.
+ */
+function stepContext(stepId: string): string {
+  const found = getStep(stepId);
+  if (!found) {
+    return `ステップ ID: ${stepId}\n(該当するステップ情報が見つかりません)`;
+  }
+  return [
+    `レッスン: ${found.lesson.title}`,
+    `ステップ ${found.step.id}: ${found.step.title}`,
+    `指示文:\n${found.step.instruction}`,
+  ].join("\n");
+}
 
 /**
  * Common voice for every chat flow. Keep it short — the model has a
@@ -43,7 +61,7 @@ export function buildJudgePrompt({
 
 \`message\` には学習者のコードに即した具体的な一言(2 文程度)を書く。`;
 
-  const user = `ステップ ID: ${stepId}
+  const user = `${stepContext(stepId)}
 模範解答(参考、表に出さない): ${solution ?? "(なし)"}
 
 学習者のコード:
@@ -76,7 +94,7 @@ export function buildPraisePrompt({
 - 絵文字は最大 1 個
 - 学習者の入力(自分の名前など)に触れて自然に褒める
 - JSON や前置きは不要。**プレーンな文だけ**`,
-    user: `ステップ ID: ${stepId}
+    user: `${stepContext(stepId)}
 
 学習者のコード:
 \`\`\`html
@@ -102,14 +120,14 @@ export function buildHintPrompt({
 - **答えそのものは絶対に書かない**(コード例 \`<h1>名前</h1>\` のような直接の解答は禁止)
 - 「どこを見直すとよいか」を 1〜2 文でやさしく示す
 - JSON は不要。プレーンな文だけ`,
-    user: `ステップ ID: ${stepId}
+    user: `${stepContext(stepId)}
 
 学習者の現在のコード:
 \`\`\`html
 ${code}
 \`\`\`
 
-ヒントを 1〜2 文で。`,
+このステップで詰まっている学習者にヒントを 1〜2 文で。`,
   };
 }
 
@@ -131,7 +149,7 @@ export function buildQuestionPrompt({
 - 専門用語は噛み砕く
 - 3〜4 文以内
 - JSON は不要。プレーンな文だけ`,
-    user: `ステップ ID: ${stepId}
+    user: `${stepContext(stepId)}
 
 学習者の現在のコード:
 \`\`\`html

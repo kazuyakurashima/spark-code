@@ -78,3 +78,14 @@ export function getLesson(id: number | string): Lesson | undefined {
   if (!Number.isFinite(numId)) return undefined;
   return lessons[numId - 1];
 }
+
+/** Look up a step by its `lesson-step` id (e.g. "1-2"). */
+export function getStep(
+  stepId: string,
+): { lesson: Lesson; step: LessonStep } | undefined {
+  for (const lesson of lessons) {
+    const step = lesson.steps.find((s) => s.id === stepId);
+    if (step) return { lesson, step };
+  }
+  return undefined;
+}

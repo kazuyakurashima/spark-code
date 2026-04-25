@@ -13,6 +13,12 @@ import type { ChatRequest, ChatResponse } from "@/types/chat";
 // Anthropic SDK uses Node APIs, so keep this on the Node runtime.
 export const runtime = "nodejs";
 
+// Server-side payload caps. The textarea also enforces 500 on `question`,
+// but a direct POST can bypass that, so we re-check here.
+const MAX_CODE_LENGTH = 10_000;
+const MAX_QUESTION_LENGTH = 1_000;
+const MAX_STEP_ID_LENGTH = 32;
+
 /** Lightweight runtime guard so a malformed body produces a typed 400. */
 function isValidRequest(body: unknown): body is ChatRequest {
   if (!body || typeof body !== "object") return false;
@@ -28,6 +34,20 @@ function isValidRequest(body: unknown): body is ChatRequest {
     default:
       return false;
   }
+}
+
+/** Returns an error message if any size cap is exceeded, else null. */
+function checkSizeLimits(body: ChatRequest): string | null {
+  if (body.stepId.length > MAX_STEP_ID_LENGTH) {
+    return "stepId が長すぎます";
+  }
+  if (body.code.length > MAX_CODE_LENGTH) {
+    return `コードが長すぎます(${MAX_CODE_LENGTH} 文字以内)`;
+  }
+  if (body.type === "question" && body.question.length > MAX_QUESTION_LENGTH) {
+    return `質問が長すぎます(${MAX_QUESTION_LENGTH} 文字以内)`;
+  }
+  return null;
 }
 
 /** Best-effort JSON extraction — tolerate stray prose before/after the object. */
@@ -56,6 +76,13 @@ export async function POST(request: NextRequest) {
     return Response.json(
       { type: "error", message: "リクエスト形式が不正です" } satisfies ChatResponse,
       { status: 400 },
+    );
+  }
+  const sizeError = checkSizeLimits(body);
+  if (sizeError) {
+    return Response.json(
+      { type: "error", message: sizeError } satisfies ChatResponse,
+      { status: 413 },
     );
   }
 

@@ -21,12 +21,14 @@ async function callChat(body: object): Promise<ChatResponse> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok && res.status !== 400) {
-    // Even on 4xx/5xx the route returns a typed JSON body, but guard
-    // against opaque failures (network drop etc).
-    throw new Error(`HTTP ${res.status}`);
+  // /api/chat always tries to return a typed JSON body — including on 4xx/5xx.
+  // Prefer the server's message; fall back to the status code only when the
+  // body is missing or unparseable (network drops, opaque proxies, etc.).
+  try {
+    return (await res.json()) as ChatResponse;
+  } catch {
+    throw new Error(`HTTP ${res.status} (no JSON body)`);
   }
-  return (await res.json()) as ChatResponse;
 }
 
 export function LessonWorkspace({ lessonId }: { lessonId: number }) {
