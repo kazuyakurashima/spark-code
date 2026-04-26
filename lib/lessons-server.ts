@@ -47,7 +47,17 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
 };
 
 function selectorTargetsH1(selector: string): boolean {
-  const tokens = selector
+  // Strip the contents of any parentheses first so functional pseudos
+  // (`:has(> h1)`, `:not(h1)`, `:is(h1)`, `:where(h1)`) don't leak their
+  // arguments into the combinator split. Loop until no `(...)` is left
+  // to also strip nested `:not(:has(h1))` style cases.
+  let stripped = selector;
+  while (true) {
+    const next = stripped.replace(/\([^()]*\)/g, "");
+    if (next === stripped) break;
+    stripped = next;
+  }
+  const tokens = stripped
     .split(/[\s>+~]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
