@@ -10,6 +10,12 @@ import { ChatPanel } from "./ChatPanel";
 import { Preview } from "./Preview";
 import { CodeEditor } from "./CodeEditor";
 import { Lesson6Recap } from "./Lesson6Recap";
+import { LocationBar } from "./LocationBar";
+
+// §10.2 の現在地表示が「Lesson X / 16」と書かれているとおり、Phase 3 完成
+// 時の総レッスン数は 16 に固定。Phase 3.1 では実装済みは Lesson 1-6 のみ
+// だが、表示分母は最終形で固定して 3 周構造の全体像を初心者に常に見せる。
+const TOTAL_LESSONS = 16;
 
 type BusyKind = "judge" | "hint" | "question" | null;
 
@@ -335,42 +341,49 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   // §6 Lesson 6 / Lesson 16: 振り返りレッスンはコード入力なし。
   // 3 ペインを使わず Lesson6Recap が画面全体を取る。lesson_started /
   // step_started / lesson_completed の log は上の useEffect 群が出す。
-  if (lesson.kind === "recap") {
-    return <Lesson6Recap lesson={lesson} />;
-  }
+  // 上部の LocationBar は通常 / recap いずれでも常時表示する。
+  const inner =
+    lesson.kind === "recap" ? (
+      <Lesson6Recap lesson={lesson} />
+    ) : (
+      <ThreePaneLayout
+        left={
+          <LessonPanel
+            lesson={lesson}
+            currentStepIndex={stepIndex}
+            onJudge={handleJudge}
+            isJudging={busy === "judge"}
+            sessionId={log.sessionId}
+            onRestart={handleRestart}
+            advanceNotice={advanceNotice}
+          />
+        }
+        center={
+          <CodeEditor
+            value={code}
+            onChange={handleCodeChange}
+            language={lesson.editorLanguage ?? "html"}
+          />
+        }
+        rightTop={<Preview code={code} lesson={lesson} />}
+        rightBottom={
+          <ChatPanel
+            messages={messages}
+            onHint={handleHint}
+            onAsk={handleQuestion}
+            isHinting={busy === "hint"}
+            isAsking={busy === "question"}
+            isBusy={busy !== null}
+            disableHint={isLastStep}
+          />
+        }
+      />
+    );
 
   return (
-    <ThreePaneLayout
-      left={
-        <LessonPanel
-          lesson={lesson}
-          currentStepIndex={stepIndex}
-          onJudge={handleJudge}
-          isJudging={busy === "judge"}
-          sessionId={log.sessionId}
-          onRestart={handleRestart}
-          advanceNotice={advanceNotice}
-        />
-      }
-      center={
-        <CodeEditor
-          value={code}
-          onChange={handleCodeChange}
-          language={lesson.editorLanguage ?? "html"}
-        />
-      }
-      rightTop={<Preview code={code} lesson={lesson} />}
-      rightBottom={
-        <ChatPanel
-          messages={messages}
-          onHint={handleHint}
-          onAsk={handleQuestion}
-          isHinting={busy === "hint"}
-          isAsking={busy === "question"}
-          isBusy={busy !== null}
-          disableHint={isLastStep}
-        />
-      }
-    />
+    <div className="h-screen w-full bg-slate-950 grid grid-rows-[auto_1fr] overflow-hidden">
+      <LocationBar lesson={lesson} totalLessons={TOTAL_LESSONS} />
+      <div className="overflow-hidden">{inner}</div>
+    </div>
   );
 }

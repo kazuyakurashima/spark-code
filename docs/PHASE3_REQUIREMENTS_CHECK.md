@@ -258,6 +258,35 @@
 - コミット:
   - (T7 単独コミットの sha は commit と同タイミングで記録)
 
+## T8: 現在地表示バー
+
+- 対応要件: §10.1 / §10.2
+- 実装内容:
+  - 新規 [components/LocationBar.tsx](../components/LocationBar.tsx)、3 段構成:
+    - **上段**: 周回プログレッション(`1 周目 [全体像] » 2 周目 [整える] » 3 周目 [動かす]`)、現在の周のみグラデーション pill でハイライト + `aria-current="step"`、過去/未来は淡色
+    - **中段**: `Lesson X / 16: <title>`(分母 16 を最終形固定で表示し、§4 の 3 周構造を初心者に常に見せる)
+    - **下段**: 4 役割凡例(`HTML=中身 / CSS=見た目 / JS=動き / Sparkコーチ=先生`)、`text-sm`(14px)を下限に 60 代視点を考慮
+  - [components/ThreePaneLayout.tsx](../components/ThreePaneLayout.tsx) を `h-screen` → `h-full` に変更(LessonWorkspace の outer wrapper が `h-screen` + `grid-rows-[auto_1fr]` を持つため)
+  - [components/LessonWorkspace.tsx](../components/LessonWorkspace.tsx) に outer wrapper(LocationBar + inner)を追加。recap モードと通常モードどちらでも LocationBar が常に画面上部に出る
+  - `TOTAL_LESSONS = 16` 定数を LessonWorkspace 内に置き、§10.2 の `Lesson 4/16` 表示形式を担保
+- 主な変更ファイル:
+  - `components/LocationBar.tsx`(新規)
+  - `components/ThreePaneLayout.tsx`(`h-screen` → `h-full`)
+  - `components/LessonWorkspace.tsx`(outer wrapper + LocationBar 描画)
+- 要件定義書との差分:
+  - **なし**(§10.2 の表示要素 3 段すべてを実装)
+- 連動 / 未対応 TODO:
+  - 周回間の **ナビゲーション**(クリックで /lesson/N に飛ぶ)は §10.2 で言及されておらず、本タスクのスコープ外。Phase 3.2 以降で必要になれば追加
+  - 60 代テスト時に「文字が小さい」とフィードバックが出たら下段凡例を `text-base` に上げる余地あり(§17.2 例)
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - Lesson 1〜6 すべて `200 OK` で、curl で `周目` テキストが各 3 件以上検出される(React の `<!-- -->` text fragment marker の都合で完全文字列マッチは取れないが、見た目では `1 周目 [全体像]` が表示されている)
+  - L6 (recap) でも LocationBar が頭に出る(curl で `周目=6` は 3 from LocationBar + 3 from celebration "1 周目クリア!" の合計、ということで recap headline と LocationBar が共存していることを確認)
+  - tsc / lint クリーン
+- コミット:
+  - (T8 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)

@@ -7,9 +7,14 @@ type Props = {
   rightBottom: ReactNode;
 };
 
+/**
+ * 3 ペイン本体(左 25% / 中 35% / 右 40% で右は上下 1:1)。
+ * 画面全体の高さは外側ラッパー(LessonWorkspace)が `h-screen` + grid-rows
+ * で確保し、このコンポーネント自身は `h-full` で残りを埋める。
+ */
 export function ThreePaneLayout({ left, center, rightTop, rightBottom }: Props) {
   return (
-    <div className="h-screen w-full grid grid-cols-[25%_35%_40%] bg-slate-950 overflow-hidden">
+    <div className="h-full w-full grid grid-cols-[25%_35%_40%] bg-slate-950 overflow-hidden">
       <aside className="border-r border-slate-800 overflow-y-auto">{left}</aside>
       <main className="border-r border-slate-800 overflow-hidden flex flex-col">
         {center}
