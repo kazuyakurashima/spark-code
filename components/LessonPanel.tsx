@@ -3,6 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Lesson } from "@/lib/lessons";
+import { Lesson1ClearReport } from "./Lesson1ClearReport";
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
@@ -42,6 +43,10 @@ type Props = {
   currentStepIndex: number;
   onJudge: () => void;
   isJudging: boolean;
+  /** localStorage session id; empty during SSR / first render. */
+  sessionId: string;
+  /** "2周目を始める" button handler from the workspace. */
+  onRestart: () => void;
 };
 
 export function LessonPanel({
@@ -49,6 +54,8 @@ export function LessonPanel({
   currentStepIndex,
   onJudge,
   isJudging,
+  sessionId,
+  onRestart,
 }: Props) {
   const currentStep = lesson.steps[currentStepIndex];
   const isLast = currentStepIndex === lesson.steps.length - 1;
@@ -127,15 +134,10 @@ export function LessonPanel({
       )}
 
       {isLast && (
-        <div className="mt-auto rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-pink-500/15 p-5 text-center">
-          <p className="text-2xl mb-2">🎉</p>
-          <p className="text-sm font-semibold text-white mb-1">
-            Lesson 1 クリア!
-          </p>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            次のレッスン(色を変える / 背景を装飾する など)は{" "}
-            <span className="font-semibold text-pink-300">Coming Soon</span>
-            。お楽しみに!
+        <div className="mt-auto">
+          <Lesson1ClearReport sessionId={sessionId} onRestart={onRestart} />
+          <p className="mt-3 text-center text-xs text-slate-500">
+            次のレッスン(色・余白)は <span className="text-pink-300">Coming Soon</span>
           </p>
         </div>
       )}

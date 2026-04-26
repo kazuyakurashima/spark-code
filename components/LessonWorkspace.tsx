@@ -279,6 +279,19 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     [busy, currentStep.id, code, appendMessage, log],
   );
 
+  // "2周目を始める" → reset workspace state. We keep the same lesson
+  // mounted (no router push) so the localStorage session id stays the
+  // same — the next round's events get aggregated alongside round 1
+  // and the report still works on the most recent attempt.
+  const handleRestart = useCallback(() => {
+    setCode("");
+    setMessages([]);
+    setStepIndex(0);
+    judgeAttemptsRef.current = {};
+    lessonCompletedRef.current = false;
+    prevStepIdRef.current = lesson.steps[0].id;
+  }, [lesson.steps]);
+
   return (
     <ThreePaneLayout
       left={
@@ -287,6 +300,8 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           currentStepIndex={stepIndex}
           onJudge={handleJudge}
           isJudging={busy === "judge"}
+          sessionId={log.sessionId}
+          onRestart={handleRestart}
         />
       }
       center={<CodeEditor value={code} onChange={handleCodeChange} />}
