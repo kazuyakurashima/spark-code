@@ -127,9 +127,10 @@ export function LessonPanel({
           type="button"
           onClick={onJudge}
           disabled={isJudging}
+          aria-label={isJudging ? "先生が確認中" : "答え合わせする"}
           className="mt-auto rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40 disabled:opacity-60 disabled:cursor-progress disabled:hover:translate-y-0"
         >
-          {isJudging ? "判定中…" : "次のステップへ"}
+          {isJudging ? "先生が確認中…" : "答え合わせする"}
         </button>
       )}
 
