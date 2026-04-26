@@ -50,6 +50,10 @@ function buildHintSentence(report: Lesson1Report): string {
 export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
   const [state, setState] = useState<FetchState>({ kind: "loading" });
 
+  // Reset state when sessionId changes (e.g. after restart).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setState({ kind: "loading" }), [sessionId]);
+
   useEffect(() => {
     let cancelled = false;
     if (!sessionId) {
@@ -60,16 +64,31 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
       setState({ kind: "error", message: "セッション ID が見つかりません" });
       return;
     }
-    (async () => {
+    // The completion event is fire-and-forget on the workspace side, so
+    // a freshly-mounted report component can race the lesson_completed
+    // INSERT. Retry up to 3 times with a small backoff if the server
+    // hasn't seen lessonCompleted yet — once it does, stop retrying.
+    const RETRY_DELAYS_MS = [400, 800, 1500];
+    let attempt = 0;
+
+    const fetchOnce = async (): Promise<void> => {
       try {
         const res = await fetch(`/api/report/${encodeURIComponent(sessionId)}`);
         const json = (await res.json()) as Lesson1ReportResponse;
         if (cancelled) return;
         if ("error" in json) {
           setState({ kind: "error", message: json.error });
-        } else {
-          setState({ kind: "ready", data: json });
+          return;
         }
+        if (!json.lessonCompleted && attempt < RETRY_DELAYS_MS.length) {
+          const delay = RETRY_DELAYS_MS[attempt];
+          attempt += 1;
+          setTimeout(() => {
+            if (!cancelled) void fetchOnce();
+          }, delay);
+          return;
+        }
+        setState({ kind: "ready", data: json });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -77,7 +96,8 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
           message: (err as Error).message || "fetch failed",
         });
       }
-    })();
+    };
+    void fetchOnce();
     return () => {
       cancelled = true;
     };

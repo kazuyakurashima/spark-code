@@ -1,9 +1,28 @@
 import type { NextRequest } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseAnonServer } from "@/lib/supabase-server";
 import type { LearningEventType } from "@/types/supabase";
 
 // supabase-js uses Node APIs, so keep this on the Node runtime.
 export const runtime = "nodejs";
+
+/**
+ * Reject requests that don't come from our own origin. Browsers always
+ * attach Origin on cross-origin POSTs; same-origin POSTs from the
+ * deployed site also include it. Server-to-server abusers (curl, scripts)
+ * either omit Origin or send a host that doesn't match our own — those
+ * get a 403.
+ */
+function isAllowedOrigin(request: NextRequest): boolean {
+  const host = request.headers.get("host");
+  const origin = request.headers.get("origin");
+  if (!host || !origin) return false;
+  try {
+    const originHost = new URL(origin).host;
+    return originHost === host;
+  } catch {
+    return false;
+  }
+}
 
 const VALID_EVENT_TYPES: ReadonlySet<LearningEventType> = new Set<LearningEventType>([
   "lesson_started",
@@ -68,6 +87,9 @@ function isLogBody(value: unknown): value is LogBody {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isAllowedOrigin(request)) {
+    return Response.json({ error: "forbidden origin" }, { status: 403 });
+  }
   let body: unknown;
   try {
     body = await request.json();
@@ -78,7 +100,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "invalid body" }, { status: 400 });
   }
   try {
-    const supabase = getSupabaseServer();
+    // anon client: RLS becomes the real gate even for the route handler,
+    // so this endpoint can't be coerced into doing more than an
+    // anonymous client-side insert would.
+    const supabase = getSupabaseAnonServer();
     const { error } = await supabase.from("learning_events").insert({
       session_id: body.sessionId,
       lesson_id: body.lessonId,

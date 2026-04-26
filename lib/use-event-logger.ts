@@ -32,6 +32,18 @@ export function getStoredSessionId(): string | null {
   }
 }
 
+/** Mint a fresh session id and persist it, replacing any prior value. */
+function rotateStoredSessionId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const sid = crypto.randomUUID();
+    window.localStorage.setItem(SESSION_KEY, sid);
+    return sid;
+  } catch {
+    return "";
+  }
+}
+
 type EmitInput = {
   eventType: LearningEventType;
   stepId?: string | null;
@@ -159,6 +171,19 @@ export function useEventLogger(lessonId: string) {
     emit({ eventType: "lesson_completed" });
   }, [emit]);
 
+  /**
+   * Mint a fresh session id and replace the stored one. Use this when the
+   * learner restarts a lesson — subsequent emits go to the new id, and the
+   * report fetcher (keyed on the same id) naturally scopes to this round.
+   * Returns the new id so callers can drive UI off it synchronously.
+   */
+  const resetSession = useCallback((): string => {
+    const next = rotateStoredSessionId();
+    sessionIdRef.current = next;
+    setSessionId(next);
+    return next;
+  }, []);
+
   return {
     sessionId,
     lessonStarted,
@@ -169,5 +194,6 @@ export function useEventLogger(lessonId: string) {
     questionAsked,
     codeChanged,
     lessonCompleted,
+    resetSession,
   };
 }
