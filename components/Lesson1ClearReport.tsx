@@ -11,7 +11,7 @@ type Props = {
 
 type FetchState =
   | { kind: "loading" }
-  | { kind: "error"; message: string }
+  | { kind: "error"; message: string; retry?: () => void }
   | { kind: "ready"; data: Lesson1Report };
 
 function buildToughestSentence(report: Lesson1Report): string {
@@ -49,6 +49,10 @@ function buildHintSentence(report: Lesson1Report): string {
 
 export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
   const [state, setState] = useState<FetchState>({ kind: "loading" });
+  // Bumping this re-runs the fetch effect — used for the "もう一度試す"
+  // button when the lesson_completed insert is taking longer than our
+  // initial retry budget.
+  const [retryNonce, setRetryNonce] = useState(0);
 
   // Reset state when sessionId changes (e.g. after restart).
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -90,12 +94,14 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
             return;
           }
           // Retry budget exhausted but the lesson_completed event still
-          // hasn't been recorded. Surface this honestly instead of
-          // rendering a "ready" report with partial counts.
+          // hasn't been recorded. Surface this honestly + offer an
+          // in-place retry so the learner doesn't have to reload the
+          // page if the insert eventually lands.
           setState({
             kind: "error",
             message:
-              "完了イベントの記録がまだ届いていません。少し待ってからページを再読み込みしてみてください。",
+              "完了イベントの記録がまだ届いていません。少し待ってから「もう一度試す」を押してください。",
+            retry: () => setRetryNonce((n) => n + 1),
           });
           return;
         }
@@ -112,7 +118,7 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, retryNonce]);
 
   if (state.kind === "loading") {
     return (
@@ -123,8 +129,17 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
   }
   if (state.kind === "error") {
     return (
-      <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-6 text-center text-sm text-rose-200">
-        レポートを読み込めませんでした({state.message})。
+      <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-6 text-center text-sm text-rose-200 space-y-3">
+        <p>{state.message}</p>
+        {state.retry && (
+          <button
+            type="button"
+            onClick={state.retry}
+            className="rounded-lg bg-rose-500/20 border border-rose-500/40 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/30 hover:-translate-y-0.5"
+          >
+            もう一度試す
+          </button>
+        )}
       </div>
     );
   }
