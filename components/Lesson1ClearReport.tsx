@@ -54,17 +54,17 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
   // initial retry budget.
   const [retryNonce, setRetryNonce] = useState(0);
 
-  // Reset state when sessionId changes (e.g. after restart).
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setState({ kind: "loading" }), [sessionId]);
-
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    // Reset to loading on every fetch cycle (sessionId change OR retry
+    // click). This both shows progress in the UI and disables the
+    // retry button (its presence is gated on state.kind === "error").
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({ kind: "loading" });
+
     if (!sessionId) {
-      // setState in an effect here is intentional: the parent re-renders
-      // once the session id resolves from localStorage, and we want to
-      // reflect that transition in the panel.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ kind: "error", message: "セッション ID が見つかりません" });
       return;
     }
@@ -88,7 +88,8 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
           if (attempt < RETRY_DELAYS_MS.length) {
             const delay = RETRY_DELAYS_MS[attempt];
             attempt += 1;
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
+              timeoutId = null;
               if (!cancelled) void fetchOnce();
             }, delay);
             return;
@@ -116,7 +117,14 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
     };
     void fetchOnce();
     return () => {
+      // Bump cancelled before clearing the timeout so any in-flight
+      // fetch's .then callback also bails. The next effect run starts
+      // with a fresh `cancelled` flag.
       cancelled = true;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
     };
   }, [sessionId, retryNonce]);
 
