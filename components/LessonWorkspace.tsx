@@ -61,7 +61,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     throw new Error(`Lesson ${lessonId} not found`);
   }
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(lesson.starterCode ?? "");
   const [stepIndex, setStepIndex] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState<BusyKind>(null);
@@ -310,7 +310,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   // the next attempt's events (and the next clear report) are scoped
   // to the new session id, so the report shows this attempt only.
   const handleRestart = useCallback(() => {
-    setCode("");
+    setCode(lesson.starterCode ?? "");
     setMessages([]);
     setStepIndex(0);
     setAdvanceNotice(null);
@@ -323,7 +323,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     // next report has the correct scope.
     log.lessonStarted();
     log.stepStarted(lesson.steps[0].id);
-  }, [lesson.steps, log]);
+  }, [lesson.steps, lesson.starterCode, log]);
 
   return (
     <ThreePaneLayout

@@ -14,12 +14,21 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
     return inner.length > 0 && inner !== "名前";
   },
   "1-3": () => true,
+  // Lesson 2: <p> タグが存在し、中身が trim 後 0 文字超
+  "2-1": (code) => {
+    const m = code.match(/<p>([\s\S]*?)<\/p>/);
+    if (!m) return false;
+    return m[1].trim().length > 0;
+  },
+  "2-2": () => true,
 };
 
 const stepSolutions: Record<string, string | null> = {
   "1-1": "<h1>名前</h1>",
   "1-2": "<h1>太郎</h1>",
   "1-3": null,
+  "2-1": "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>",
+  "2-2": null,
 };
 
 /**

@@ -62,7 +62,9 @@ export type Lesson = {
   steps: LessonStep[];
 };
 
-const LESSON_1_PREVIEW_CSS = `
+// Shared canvas styling. Each lesson extends this so the learner sees
+// their card visibly evolve as new elements join the page.
+const BASE_PREVIEW_CSS = `
 body {
   margin: 0;
   min-height: 100vh;
@@ -75,6 +77,10 @@ body {
   padding: 2rem;
   box-sizing: border-box;
 }
+`;
+
+// Lesson 1: bold centered name only.
+const LESSON_1_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
 h1 {
   font-size: clamp(2.5rem, 9vw, 6rem);
   font-weight: 800;
@@ -82,7 +88,26 @@ h1 {
   margin: 0;
   text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
 }
-`.trim();
+`).trim();
+
+// Lesson 2: name shrinks slightly to make room for an introduction
+// paragraph. The new <p> rule is what produces this lesson's visible change.
+const LESSON_2_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
+h1 {
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+p {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 36ch;
+  margin: 0 auto;
+}
+`).trim();
 
 export const lessons: Lesson[] = [
   {
@@ -116,7 +141,36 @@ export const lessons: Lesson[] = [
         id: "1-3",
         title: "完成!",
         instruction:
-          "おめでとう!Lesson 1 クリアだ 🎉\n\n`<h1>` タグだけで、画面いっぱいの綺麗なデザインが作れたね。\n\n次のレッスン(色を変える・背景を装飾する など)は **Coming Soon**。お楽しみに!",
+          "おめでとう!Lesson 1 クリアだ 🎉\n\n`<h1>` タグだけで、画面いっぱいの綺麗なデザインが作れたね。\n\n次は **自己紹介文** を追加して、もっとあなたらしいページにしよう。",
+        hintDefault: "",
+      },
+    ],
+  },
+  {
+    id: 2,
+    round: 1,
+    paid: false,
+    title: "自己紹介文を表示しよう",
+    overview:
+      "名前の下に、自己紹介の文章を 1 行追加します。`<p>` タグで囲むと、ページに「文章のかたまり」を載せられるよ。",
+    concept: "<p> タグで段落の文章を表示する",
+    previewMode: "html",
+    previewCss: LESSON_2_PREVIEW_CSS,
+    starterCode: "<h1>かず</h1>\n",
+    steps: [
+      {
+        id: "2-1",
+        title: "自己紹介を 1 行書こう",
+        instruction:
+          "Lesson 1 で書いた名前の下に、自分の自己紹介を 1 行追加してみよう。\n\n例: `<p>水戸の塾で先生をしています</p>` と書くと「水戸の塾で先生をしています」が表示されるよ。\n\n`<p>` は文章のかたまりを囲むタグ(段落を表す paragraph タグ)。",
+        hintDefault:
+          "`<h1>...</h1>` の下に新しい行で `<p>...</p>` を書いてみて。中身は何でも OK。",
+      },
+      {
+        id: "2-2",
+        title: "完成!",
+        instruction:
+          "Lesson 2 クリア!🎉\n\n名前 + 自己紹介で、ぐっと「自分のページ感」が出てきたね。\n\n次は **好きなものリスト** を加えて、もっと自分らしくしよう。",
         hintDefault: "",
       },
     ],

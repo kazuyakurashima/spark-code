@@ -108,6 +108,36 @@
 - コミット:
   - (T2 単独コミットの sha は commit と同タイミングで記録)
 
+## T3: Lesson 2(自己紹介文 `<p>`)
+
+- 対応要件: §5.1 #2 / §6 Lesson 2 / §3.5 / §5.2(`<p>` の 1 周目登場)
+- 実装内容:
+  - `BASE_PREVIEW_CSS` を抽出し、Lesson 1 / 2 の previewCss はこれを extend する形に refactor
+  - Lesson 2 の `LESSON_2_PREVIEW_CSS` で `<h1>` のサイズを少し縮め、`<p>` の組版(`max-width: 36ch` / `line-height: 1.7` / 半透明白)を追加(§3.3 1 レッスン 1 つの見た目変化)
+  - Lesson 2 のステップ構成は **2 ステップ**(2-1: 自己紹介を 1 行書く / 2-2: 完成)。Lesson 1 の 3 ステップから一段階軽くした(タグ構文は L1 で経験済みのため §3.1 を尊重)
+  - `starterCode: "<h1>かず</h1>\n"` を Lesson 2 に設定。**Lesson 1 の成果物が引き継がれる体験**(§4.2 真の 3 周構造の precursor)
+  - `LessonWorkspace` の `useState` 初期値と `handleRestart` 内 `setCode` を `lesson.starterCode ?? ""` に更新
+  - `lessons-server.ts` に `2-1` matcher(`<p>...</p>` で trim 後非空)、`2-2` always-true、対応 solution を追加
+- 主な変更ファイル:
+  - `lib/lessons.ts`
+  - `lib/lessons-server.ts`
+  - `components/LessonWorkspace.tsx`
+- 要件定義書との差分:
+  - **あり**(軽微)
+- 差分がある場合の理由:
+  - §6 Lesson 2 の判定文「`<p>` タグが存在し、中身が空でない」を素直に正規表現化したが、ステップ数を **3 ステップではなく 2 ステップ** に圧縮。理由: Lesson 1 でタグ構文を 2 ステップ(1-1: 形を覚える、1-2: 自分の名前に変える)で 1 度学習済みのため、Lesson 2 でも同じパターンを反復させると §3.1「1 レッスン 1 新概念」を超える冗長になる。Lesson 2 の新概念は `<p>` という新タグだけなので 1 ステップ + 完成ステップで十分と判断。
+- 連動 / 未対応 TODO:
+  - T4 で Lesson 3 の `<ul><li>` を追加するときに、同じ「starterCode で前レッスンの成果を持ち越す」パターンを踏襲
+  - 現状 Lesson 間の遷移 UI なし。URL 直叩き(`/lesson/2`)で動作する。Lesson 切替 UI は T8(現在地表示バー)以降で検討
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 5 つのエッジケース通過(`<p>こんにちは</p>` 合格 / `<p></p>` 不合格 / `<p>   </p>` 不合格 / 自己紹介文 合格 / `<p>` なし 不合格)
+  - Lesson 1 / Lesson 2 とも `/lesson/x` 200 OK
+  - tsc / lint クリーン
+- コミット:
+  - (T3 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
