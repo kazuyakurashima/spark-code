@@ -112,7 +112,10 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   useEffect(() => {
     const prevId = prevStepIdRef.current;
     if (prevId !== currentStep.id) {
-      const tryCount = judgeAttemptsRef.current[prevId] ?? 1;
+      // `?? 0` instead of `?? 1` so analytics can distinguish auto-
+      // completion (0 = the learner never invoked judge for this step)
+      // from real attempts (>= 1).
+      const tryCount = judgeAttemptsRef.current[prevId] ?? 0;
       log.stepCompleted(prevId, tryCount);
       log.stepStarted(currentStep.id);
       prevStepIdRef.current = currentStep.id;
@@ -125,7 +128,10 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
       // single step. Multi-step lessons also benefit: the celebrate
       // step (e.g. 1-3) gets a closing event so analytics can pair
       // every step_started with a step_completed.
-      const tryCount = judgeAttemptsRef.current[currentStep.id] ?? 1;
+      // try_count is 0 here because the learner did not run judge
+      // on the celebrate / recap step — the closing event is
+      // synthetic, not attempt-driven.
+      const tryCount = judgeAttemptsRef.current[currentStep.id] ?? 0;
       log.stepCompleted(currentStep.id, tryCount);
       log.lessonCompleted();
     }

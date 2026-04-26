@@ -101,20 +101,26 @@ stepMatchers["4-1"] = (code) => {
 stepMatchers["4-2"] = () => true;
 
 // Lesson 5: 学習者の 1 行 JS が `name.textContent = "..."` を含むこと。
-// - 変数名は **scaffold が定義する `name` のみ**(別名で書くと preview で
-//   ReferenceError になり、合格扱いだとプレビュー無反応 + ステップ進行
-//   という UX バグになるので厳密にする)
-// - 文字列リテラルは **クォートが閉じている** ものだけ合格(`= "open` の
-//   ような壊れたコードを通さない)
-// - 行コメント `//` とブロックコメント `/* */` は strip してから判定
+//
+// 規定:
+// - 行頭(or 空白のみ)から始まる行が、丸ごとこの代入文であること。
+//   行内に余計な式を書く `name.textContent = "x" + foo` や、
+//   `window.name.textContent = "x"` のような前置きは弾く。
+// - 変数名は scaffold で定義された `name` のみ(別名にすると preview で
+//   ReferenceError になり「ステップは進むがプレビュー無反応」という
+//   悪い UX を招くため)
+// - 文字列リテラルは **同種クォートで閉じられている** ものだけ合格
+// - 行コメント `//` とブロックコメント `/* */` は事前に strip
 // - `name.innerHTML = ...` のような別経路は不合格
+//
+// マルチラインフラグ(`/m`)で `^...$` がそれぞれの行の頭/末尾にマッチする。
+const LESSON_5_LINE_RE =
+  /^\s*name\s*\.\s*textContent\s*=\s*("[^"]*"|'[^']*'|`[^`]*`)\s*;?\s*$/m;
 stepMatchers["5-1"] = (code) => {
   const stripped = code
     .replace(/\/\/[^\n]*/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  return /\bname\s*\.\s*textContent\s*=\s*("[^"]*"|'[^']*'|`[^`]*`)\s*;?/.test(
-    stripped,
-  );
+  return LESSON_5_LINE_RE.test(stripped);
 };
 stepMatchers["5-2"] = () => true;
 
