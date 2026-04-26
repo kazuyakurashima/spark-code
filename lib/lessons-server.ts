@@ -21,6 +21,17 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
     return m[1].trim().length > 0;
   },
   "2-2": () => true,
+  // Lesson 3: <ul> 内に <li> が 2 つ以上、各 <li> が trim 後非空
+  "3-1": (code) => {
+    const ul = code.match(/<ul[^>]*>([\s\S]*?)<\/ul>/);
+    if (!ul) return false;
+    const items = Array.from(
+      ul[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g),
+    );
+    if (items.length < 2) return false;
+    return items.every((m) => m[1].trim().length > 0);
+  },
+  "3-2": () => true,
 };
 
 const stepSolutions: Record<string, string | null> = {
@@ -29,6 +40,9 @@ const stepSolutions: Record<string, string | null> = {
   "1-3": null,
   "2-1": "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>",
   "2-2": null,
+  "3-1":
+    "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n<ul>\n  <li>司馬遼太郎</li>\n  <li>歴史</li>\n  <li>ジャズ</li>\n</ul>",
+  "3-2": null,
 };
 
 /**

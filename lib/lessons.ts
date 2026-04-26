@@ -109,6 +109,39 @@ p {
 }
 `).trim();
 
+// Lesson 3: adds list styling. Bullets removed for a cleaner card look,
+// items spaced and the whole list constrained to a readable width.
+const LESSON_3_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
+h1 {
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+p {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 36ch;
+  margin: 0 auto 1.25rem;
+}
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 24ch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+li {
+  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.92);
+}
+`).trim();
+
 export const lessons: Lesson[] = [
   {
     id: 1,
@@ -171,6 +204,35 @@ export const lessons: Lesson[] = [
         title: "完成!",
         instruction:
           "Lesson 2 クリア!🎉\n\n名前 + 自己紹介で、ぐっと「自分のページ感」が出てきたね。\n\n次は **好きなものリスト** を加えて、もっと自分らしくしよう。",
+        hintDefault: "",
+      },
+    ],
+  },
+  {
+    id: 3,
+    round: 1,
+    paid: false,
+    title: "好きなものリストを作ろう",
+    overview:
+      "あなたの好きなものを並べて、自分らしさをページに加えます。`<ul>` と `<li>` を使うと、項目を縦に並べた「リスト」が作れるよ。",
+    concept: "<ul> と <li> で項目のリストを作る",
+    previewMode: "html",
+    previewCss: LESSON_3_PREVIEW_CSS,
+    starterCode: "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n",
+    steps: [
+      {
+        id: "3-1",
+        title: "好きなものを 2 つ以上書こう",
+        instruction:
+          "自己紹介文の下に、好きなものを **2 つ以上** リストで並べてみよう。\n\n例:\n```html\n<ul>\n  <li>司馬遼太郎</li>\n  <li>歴史</li>\n  <li>ジャズ</li>\n</ul>\n```\n\n`<ul>` がリスト全体、`<li>` が 1 項目。`<li>` を増やせば項目も増えるよ。",
+        hintDefault:
+          "`<ul>` の中に `<li>項目</li>` を 2 行以上書くだけ。中身は何でも OK。",
+      },
+      {
+        id: "3-2",
+        title: "完成!",
+        instruction:
+          "Lesson 3 クリア!🎉\n\n名前・自己紹介・好きなものリストで、ページが立体的になってきたね。\n\n次は **色** を変えて、見た目に変化を加えよう。",
         hintDefault: "",
       },
     ],

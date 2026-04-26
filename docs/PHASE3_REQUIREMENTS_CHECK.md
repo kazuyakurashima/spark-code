@@ -138,6 +138,31 @@
 - コミット:
   - (T3 単独コミットの sha は commit と同タイミングで記録)
 
+## T4: Lesson 3(好きなものリスト `<ul><li>`)
+
+- 対応要件: §5.1 #3 / §6 Lesson 3 / §5.2 行「好きなもの」
+- 実装内容:
+  - `LESSON_3_PREVIEW_CSS` を追加。`list-style: none` でブレットを消し、`flex` + `gap` で縦に整然と並べる(2 周目 Lesson 9 で「タグ風装飾」を加算する余地を残す)
+  - Lesson 3 を 2 ステップ構成で追加(3-1: リストを書く / 3-2: 完成)
+  - `starterCode: "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n"` で前 2 レッスンの成果を引き継ぎ
+  - `concept: "<ul> と <li> で項目のリストを作る"`
+  - `lessons-server.ts` に `3-1` matcher を追加: `<ul>...</ul>` 内に `<li>` が **2 つ以上**、各 `<li>` が trim 後非空。`<ol>` のみは不合格(明示的に `<ul>` 必須)
+- 主な変更ファイル:
+  - `lib/lessons.ts`
+  - `lib/lessons-server.ts`
+- 要件定義書との差分:
+  - **なし**(§6 Lesson 3「`<ul>` 内に `<li>` が 2 つ以上存在」をそのまま実装)
+- 連動 / 未対応 TODO:
+  - Lesson 9(2 周目)で `<li>` をタグ風装飾(`background` + `border-radius`)に進化させる前提を `LESSON_3_PREVIEW_CSS` の `<li>` に余白を残して維持(§5.2 進化マトリクス)
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 5 つのエッジケース通過(2 項目 OK / 1 項目 NG / `<ol>` 単独 NG / 空 `<li>` 含む NG / 改行 + 全角文字 OK)
+  - tsc / lint クリーン
+  - `/lesson/3` 200 OK
+- コミット:
+  - (T4 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
