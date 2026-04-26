@@ -5,7 +5,7 @@ import type { Lesson1Report, Lesson1ReportResponse } from "@/types/report";
 
 type Props = {
   sessionId: string;
-  /** Called when the learner clicks "2周目を始める". */
+  /** Called when the learner clicks "もう一度挑戦する". */
   onRestart: () => void;
 };
 
@@ -160,7 +160,7 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
         <p className="text-3xl mb-1" aria-hidden>
           🎉
         </p>
-        <h2 className="text-lg font-bold">1 周目クリア!おつかれさま!</h2>
+        <h2 className="text-lg font-bold">Lesson 1 クリア!おつかれさま!</h2>
         <p className="mt-1 text-xs text-slate-300">
           あなたは {r.completedSteps} / {r.totalSteps} ステップを完了しました。
         </p>
@@ -194,7 +194,7 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
         onClick={onRestart}
         className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
       >
-        2 周目を始める →
+        もう一度挑戦する →
       </button>
     </article>
   );
