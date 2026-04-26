@@ -115,8 +115,11 @@ stepMatchers["4-2"] = () => true;
 //   Lesson 5 では受け付けない(JavaScript の §6 L12 以降で導入)
 // - 行コメント `//` とブロックコメント `/* */` は事前に strip
 // - `name.innerHTML = ...` のような別プロパティへの代入は不合格
+// `[ \t]*` for inline whitespace only — `\s*` would also match `\n`, which
+// would let multiline submissions like `name\n.textContent = "x"` pass and
+// violate the documented "1 line" contract.
 const LESSON_5_FULL_RE =
-  /^name\s*\.\s*textContent\s*=\s*("[^"\n]*"|'[^'\n]*')\s*;?$/;
+  /^name[ \t]*\.[ \t]*textContent[ \t]*=[ \t]*("[^"\n]*"|'[^'\n]*')[ \t]*;?$/;
 stepMatchers["5-1"] = (code) => {
   const stripped = code
     .replace(/\/\/[^\n]*/g, "")
