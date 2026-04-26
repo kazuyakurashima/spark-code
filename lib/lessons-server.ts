@@ -32,18 +32,15 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
     return items.every((m) => m[1].trim().length > 0);
   },
   "3-2": () => true,
-  // Lesson 4: <style> 内に「`color:` プロパティが、黒以外の値で設定されている」
-  // - background-color / border-color などの *-color とは区別する
-  // - 複数の color: 宣言があれば、どれか 1 つでも非黒なら合格
+  // Lesson 4: <style> の中で **<h1> セレクタを含むルール** が
+  // `color:` を黒以外の値で設定していること。
+  // - background-color / border-color などの *-color プロパティは除外
+  // - p { color: ... } や body { color: ... } では合格させない
+  //   (レッスンの教える対象は <h1> の色変更のため)
   "4-1": (code) => {
     const styleMatch = code.match(/<style[^>]*>([\s\S]*?)<\/style>/);
     if (!styleMatch) return false;
     const css = styleMatch[1];
-    const colorDecls = Array.from(
-      // (?:^|[^-]) で `background-color` 等を除外
-      css.matchAll(/(?:^|[^-])color\s*:\s*([^;}]+)/gi),
-    );
-    if (colorDecls.length === 0) return false;
     const blackValues = new Set([
       "black",
       "#000",
@@ -53,10 +50,21 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
       "rgb(0%,0%,0%)",
       "hsl(0,0%,0%)",
     ]);
-    return colorDecls.some((m) => {
-      const v = m[1].trim().toLowerCase().replace(/\s+/g, "");
-      return v.length > 0 && !blackValues.has(v);
-    });
+    // Walk every "selector { declarations }" block in the <style>.
+    for (const rule of css.matchAll(/([^{}]+)\{([^}]+)\}/g)) {
+      const selectors = rule[1].toLowerCase().split(",").map((s) => s.trim());
+      const targetsH1 = selectors.some((s) => /\bh1\b/.test(s));
+      if (!targetsH1) continue;
+      const decls = rule[2];
+      // Find `color:` declarations (excluding *-color via the [^-] guard).
+      for (const decl of decls.matchAll(
+        /(?:^|[^-])color\s*:\s*([^;}]+)/gi,
+      )) {
+        const v = decl[1].trim().toLowerCase().replace(/\s+/g, "");
+        if (v.length > 0 && !blackValues.has(v)) return true;
+      }
+    }
+    return false;
   },
   "4-2": () => true,
 };

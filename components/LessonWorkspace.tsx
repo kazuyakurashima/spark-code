@@ -61,6 +61,12 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     throw new Error(`Lesson ${lessonId} not found`);
   }
 
+  // Initial code comes from the current lesson's starterCode. We rely
+  // on the `key={lesson.id}` set in app/lesson/[id]/page.tsx to remount
+  // this component on lesson change, which lets useState pick up the
+  // new starterCode without an explicit sync effect. If the keyed
+  // remount is ever removed, add a useEffect that resets `code` when
+  // `lesson.id` changes.
   const [code, setCode] = useState(lesson.starterCode ?? "");
   const [stepIndex, setStepIndex] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

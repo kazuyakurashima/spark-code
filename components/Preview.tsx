@@ -17,6 +17,18 @@ const LEARNER_BEGIN = "<!-- learner-code-begin -->";
 const LEARNER_END = "<!-- learner-code-end -->";
 
 /**
+ * Defang `</script>` in any string we are about to interpolate inside a
+ * literal `<script>...</script>` block. The HTML parser ends the script
+ * tag on the first `</script>` (case-insensitive) regardless of context,
+ * so a learner who types that string would otherwise inject arbitrary
+ * HTML into the preview document. `<\/script>` is parsed identically by
+ * the JS engine but does not close the script tag.
+ */
+function escapeForScriptBody(s: string): string {
+  return s.replace(/<\/script/gi, "<\\/script");
+}
+
+/**
  * Build the iframe srcDoc from the lesson + learner code.
  *
  * Layout (in order, inside <body>):
@@ -52,12 +64,13 @@ function buildSrcDoc(code: string, lesson: Lesson): string {
 
   // <script> block: only emitted in JS-enabled lessons. Combines the
   // hidden scaffold JS (e.g. document.querySelector) with the learner's
-  // 1-line JS, if applicable.
+  // 1-line JS, if applicable. Both are escaped so a learner who types
+  // `</script>` cannot break out into HTML.
   let scriptBlock = "";
   if (lesson.previewMode === "html+css+js") {
     const scriptParts: string[] = [];
-    if (scaffoldJs.trim()) scriptParts.push(scaffoldJs.trim());
-    if (isJsLesson && code.trim()) scriptParts.push(code.trim());
+    if (scaffoldJs.trim()) scriptParts.push(escapeForScriptBody(scaffoldJs.trim()));
+    if (isJsLesson && code.trim()) scriptParts.push(escapeForScriptBody(code.trim()));
     if (scriptParts.length > 0) {
       scriptBlock = `<script>\n${scriptParts.join("\n\n")}\n</script>`;
     }
