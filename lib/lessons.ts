@@ -23,6 +23,13 @@ export type LessonPreviewMode = "html" | "html+css" | "html+css+js";
 export type LessonEditorLanguage = "html" | "javascript";
 
 /**
+ * "lesson" = 通常の作問レッスン(エディタ + プレビュー + 3 ペイン)。
+ * "recap"  = 振り返り画面のみ(コードを書かせない / §6 Lesson 6 / Lesson 16)。
+ * デフォルトは "lesson"。
+ */
+export type LessonKind = "lesson" | "recap";
+
+/**
  * プレビュー iframe に学習者コードと一緒に注入される、教材側の「お膳立て」。
  * §16.2 の通り、Lesson 5 の `document.querySelector` 等はここに置き、
  * 学習者には書かせない。
@@ -45,6 +52,8 @@ export type Lesson = {
   round: LessonRound;
   /** §5.3: false=無料(Lesson 1-6), true=SparkPlus(Lesson 7+) */
   paid: boolean;
+  /** デフォルト "lesson"。"recap" はコード入力なしの祭り画面。 */
+  kind?: LessonKind;
   title: string;
   overview: string;
   /** §3.1: 1 レッスン 1 新概念。Sparkコーチの explain で使う。 */
@@ -362,6 +371,28 @@ export const lessons: Lesson[] = [
         title: "完成!",
         instruction:
           "Lesson 5 クリア!🎉\n\nたった 1 行で、画面の文字が書き換わったね。これが **JavaScript の最初の一歩**。\n\n3 周目では、入力フォームから自分でカードを編集できるところまでいくよ。\n\n次は Lesson 6 で、ここまでの 5 つのレッスンを振り返って、全体像をまとめよう。",
+        hintDefault: "",
+      },
+    ],
+  },
+  {
+    id: 6,
+    round: 1,
+    paid: false,
+    kind: "recap",
+    title: "1 周目クリア!",
+    overview:
+      "ここまでの 5 つのレッスンで、あなたは Web 制作の全体像を一周しました。HTML / CSS / JavaScript / Sparkコーチ — 4 つの役割を、自分の手で動かして体験しました。",
+    concept: "1 周目で学んだ全体像を振り返る",
+    // recap は実コードを書かないが、Preview コンポーネントは依然として
+    // 型を要求するので "html" を入れておく(実際は描画されない)。
+    previewMode: "html",
+    previewCss: "",
+    steps: [
+      {
+        id: "6-1",
+        title: "振り返り完了",
+        instruction: "ここまでよくがんばったね!1 周目クリアおめでとう!",
         hintDefault: "",
       },
     ],

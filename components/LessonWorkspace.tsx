@@ -9,6 +9,7 @@ import { LessonPanel } from "./LessonPanel";
 import { ChatPanel } from "./ChatPanel";
 import { Preview } from "./Preview";
 import { CodeEditor } from "./CodeEditor";
+import { Lesson6Recap } from "./Lesson6Recap";
 
 type BusyKind = "judge" | "hint" | "question" | null;
 
@@ -330,6 +331,13 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     log.lessonStarted();
     log.stepStarted(lesson.steps[0].id);
   }, [lesson.steps, lesson.starterCode, log]);
+
+  // §6 Lesson 6 / Lesson 16: 振り返りレッスンはコード入力なし。
+  // 3 ペインを使わず Lesson6Recap が画面全体を取る。lesson_started /
+  // step_started / lesson_completed の log は上の useEffect 群が出す。
+  if (lesson.kind === "recap") {
+    return <Lesson6Recap lesson={lesson} />;
+  }
 
   return (
     <ThreePaneLayout

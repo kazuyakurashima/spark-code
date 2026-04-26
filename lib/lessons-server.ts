@@ -116,6 +116,9 @@ stepMatchers["5-1"] = (code) => {
 };
 stepMatchers["5-2"] = () => true;
 
+// Lesson 6: kind="recap" のため、判定対象のコード入力は無い。常に true。
+stepMatchers["6-1"] = () => true;
+
 const stepSolutions: Record<string, string | null> = {
   "1-1": "<h1>名前</h1>",
   "1-2": "<h1>太郎</h1>",
@@ -130,6 +133,7 @@ const stepSolutions: Record<string, string | null> = {
   "4-2": null,
   "5-1": 'name.textContent = "こんにちは!";',
   "5-2": null,
+  "6-1": null,
 };
 
 /**

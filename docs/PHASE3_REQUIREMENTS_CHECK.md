@@ -222,6 +222,42 @@
 - コミット:
   - (T6 単独コミットの sha は commit と同タイミングで記録)
 
+## T7: Lesson 6(1 周目クリア + 総合振り返り)
+
+- 対応要件: §5.1 #6 / §6 Lesson 6 / §11.1 / §11.4
+- 実装内容:
+  - `Lesson` 型に `kind?: "lesson" | "recap"` を追加(`LessonKind` 型)。デフォルト "lesson"
+  - Lesson 6 を `kind: "recap"` で登録(round=1, paid=false, 1 ステップ "6-1" always-true)
+  - 新規 [components/Lesson6Recap.tsx](../components/Lesson6Recap.tsx):
+    - Header「🎉 1 周目クリア!おつかれさま!」
+    - 5 要素の振り返りカード(Lesson 1-5、emoji + 学んだこと)
+    - SparkCode 4 役割(HTML / CSS / JS / Sparkコーチ)概観
+    - Sparkコーチ総合振り返り(§6 Lesson 6 例文を採用、Phase 3.1 では固定文 — T15 で苦労度合いに応じた切替へ拡張予定とコメント明記)
+    - 未来カードプレビュー(箇条書き placeholder、`TODO Phase 3.1 (T18): 静的スナップショット比較に置換` コメント)
+    - 課金 CTA placeholder(主ボタンクリックで `alert("SparkPlus は Phase 3.2 で公開予定…")`、副ボタン「後で考える」で CTA セクションを畳む / `TODO Phase 3.1 (T17): UpsellBlock` + `TODO Phase 3.2: Stripe Checkout` コメント明記)
+  - LessonWorkspace に `if (lesson.kind === "recap") return <Lesson6Recap />` 分岐を追加。state / useEffect 群はそのまま走るので `lesson_started` / `step_started` / `lesson_completed` の log は通常通り発火する
+- 主な変更ファイル:
+  - `lib/lessons.ts`(`LessonKind` 型 + Lesson 6 entry)
+  - `lib/lessons-server.ts`(matcher / solution に 6-1 追加、`6-1` は always-true)
+  - `components/Lesson6Recap.tsx`(新規)
+  - `components/LessonWorkspace.tsx`(分岐ロジック)
+- 要件定義書との差分:
+  - **なし**(§6 Lesson 6 の「コードを書かせない祭りレッスン」「5 要素の振り返り」「全体像」「Sparkコーチ総合振り返り」「未来カード」「課金導線」をすべて UI に反映)
+- 連動 / 未対応 TODO:
+  - T15 で 3 点セットテンプレ機構を作るとき、Lesson 6 の Sparkコーチ振り返り文を苦労度合いで切り替える(`SPARK_COACH_RECAP` 定数を replace)
+  - T17 で UpsellBlock を本実装(現状の inline 課金 CTA を置換)
+  - T18 で未来カードプレビューを静的スナップショット比較ビジュアルに置換
+  - 学習者の Lesson 1-5 の learning_events を集計したパーソナライズ版振り返り(本タスクの user 要望にあった「1-5 周目の learning_events を集計」)は、T15 で実装予定。Phase 3.1 では Lesson 1 のみ aggregate する既存 `/api/report` と分離されているので、Round 1 全体の集計は新エンドポイント or `/api/report?round=1` 拡張になる
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - `/lesson/6` 200 OK、recap で iframe なし(コード書かせないレッスンの正しい姿)
+  - 「1 周目クリア」「SparkPlus でカードを育てる」「後で考える」の 3 つの主要テキストが HTML に含まれる(curl で grep -c → 1 件ずつ)
+  - Lesson 1 / Lesson 5 の回帰なし(`/lesson/1` `/lesson/5` 200 OK)
+  - tsc / lint クリーン
+- コミット:
+  - (T7 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
