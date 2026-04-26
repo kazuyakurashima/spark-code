@@ -100,19 +100,21 @@ stepMatchers["4-1"] = (code) => {
 
 stepMatchers["4-2"] = () => true;
 
-// Lesson 5: 学習者の 1 行 JS が `<ident>.textContent = "..."` 系の
-// 代入式を含むこと。
-// - `name.textContent` を期待するが、変数名は厳密に `name` でなくても通す
-//   (scaffold 側で `name` を用意しているので、別名にすると preview は
-//    動かないが、判定文上は寛容にする)
-// - 行コメント `//` とブロックコメント `/* */` を strip してから判定
+// Lesson 5: 学習者の 1 行 JS が `name.textContent = "..."` を含むこと。
+// - 変数名は **scaffold が定義する `name` のみ**(別名で書くと preview で
+//   ReferenceError になり、合格扱いだとプレビュー無反応 + ステップ進行
+//   という UX バグになるので厳密にする)
+// - 文字列リテラルは **クォートが閉じている** ものだけ合格(`= "open` の
+//   ような壊れたコードを通さない)
+// - 行コメント `//` とブロックコメント `/* */` は strip してから判定
 // - `name.innerHTML = ...` のような別経路は不合格
 stepMatchers["5-1"] = (code) => {
   const stripped = code
     .replace(/\/\/[^\n]*/g, "")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  // ident.textContent = "..."  ('...'  `...` も許容)
-  return /[A-Za-z_$][\w$]*\s*\.\s*textContent\s*=\s*['"`]/.test(stripped);
+  return /\bname\s*\.\s*textContent\s*=\s*("[^"]*"|'[^']*'|`[^`]*`)\s*;?/.test(
+    stripped,
+  );
 };
 stepMatchers["5-2"] = () => true;
 

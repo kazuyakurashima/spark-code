@@ -119,6 +119,14 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     }
     if (isLastStep && !lessonCompletedRef.current) {
       lessonCompletedRef.current = true;
+      // Single-step lessons (recap, kind="recap") never enter the
+      // transition branch above, so without this they would emit
+      // lesson_completed without ever logging step_completed for the
+      // single step. Multi-step lessons also benefit: the celebrate
+      // step (e.g. 1-3) gets a closing event so analytics can pair
+      // every step_started with a step_completed.
+      const tryCount = judgeAttemptsRef.current[currentStep.id] ?? 1;
+      log.stepCompleted(currentStep.id, tryCount);
       log.lessonCompleted();
     }
   }, [currentStep.id, isLastStep, log]);
