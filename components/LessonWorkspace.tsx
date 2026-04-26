@@ -33,6 +33,10 @@ function isChatResponse(value: unknown): value is ChatResponse {
     case "hint":
     case "praise":
     case "question":
+    case "explain":
+    case "improve":
+    case "summary":
+    case "diagnose":
     case "error":
       return true;
     default:

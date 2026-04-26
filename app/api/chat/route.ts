@@ -1,12 +1,19 @@
 import type { NextRequest } from "next/server";
 import { matchStep } from "@/lib/lessons-server";
 import { callHaikuText } from "@/lib/anthropic";
+import { getSupabaseServer } from "@/lib/supabase-server";
 import {
+  DIAGNOSE_ALREADY_PASSING_MESSAGE,
   JUDGE_FAIL_MESSAGE_DEFAULT,
+  SUMMARY_TOO_EARLY_MESSAGE,
+  buildDiagnosePrompt,
+  buildExplainPrompt,
   buildHintPrompt,
+  buildImprovePrompt,
   buildJudgePrompt,
   buildPraisePrompt,
   buildQuestionPrompt,
+  buildSummaryPrompt,
 } from "@/lib/prompts";
 import type { ChatRequest, ChatResponse } from "@/types/chat";
 
@@ -20,19 +27,25 @@ export const runtime = "nodejs";
 const MAX_CODE_LENGTH = 10_000;
 const MAX_QUESTION_LENGTH = 500;
 const MAX_STEP_ID_LENGTH = 32;
+const MAX_SESSION_ID_LENGTH = 64;
 
 /** Lightweight runtime guard so a malformed body produces a typed 400. */
 function isValidRequest(body: unknown): body is ChatRequest {
   if (!body || typeof body !== "object") return false;
   const b = body as Record<string, unknown>;
-  if (typeof b.stepId !== "string" || typeof b.code !== "string") return false;
+  if (typeof b.stepId !== "string") return false;
   switch (b.type) {
     case "judge":
     case "hint":
     case "praise":
-      return true;
+    case "explain":
+    case "improve":
+    case "diagnose":
+      return typeof b.code === "string";
     case "question":
-      return typeof b.question === "string";
+      return typeof b.code === "string" && typeof b.question === "string";
+    case "summary":
+      return typeof b.sessionId === "string";
     default:
       return false;
   }
@@ -43,11 +56,17 @@ function checkSizeLimits(body: ChatRequest): string | null {
   if (body.stepId.length > MAX_STEP_ID_LENGTH) {
     return "stepId が長すぎます";
   }
-  if (body.code.length > MAX_CODE_LENGTH) {
+  if ("code" in body && body.code.length > MAX_CODE_LENGTH) {
     return `コードが長すぎます(${MAX_CODE_LENGTH} 文字以内)`;
   }
   if (body.type === "question" && body.question.length > MAX_QUESTION_LENGTH) {
     return `質問が長すぎます(${MAX_QUESTION_LENGTH} 文字以内)`;
+  }
+  if (
+    body.type === "summary" &&
+    body.sessionId.length > MAX_SESSION_ID_LENGTH
+  ) {
+    return "sessionId が長すぎます";
   }
   return null;
 }
@@ -62,6 +81,24 @@ function extractJsonObject(text: string): unknown | null {
   } catch {
     return null;
   }
+}
+
+/** Format learning_events rows for the summary prompt. */
+function formatEventsForSummary(
+  rows: Array<{
+    event_type: string;
+    lesson_id: string;
+    step_id: string | null;
+    metadata: Record<string, unknown>;
+    created_at: string;
+  }>,
+): string {
+  return rows
+    .map((row) => {
+      const meta = JSON.stringify(row.metadata).slice(0, 120);
+      return `- ${row.created_at} | ${row.event_type} | lesson=${row.lesson_id} step=${row.step_id ?? "-"} | ${meta}`;
+    })
+    .join("\n");
 }
 
 export async function POST(request: NextRequest) {
@@ -173,6 +210,117 @@ export async function POST(request: NextRequest) {
           message:
             text.trim() ||
             "ごめん、うまく答えが作れなかった。もう一度質問してみてくれる?",
+        } satisfies ChatResponse);
+      }
+      case "explain": {
+        const { system, user } = buildExplainPrompt(body);
+        const text = await callHaikuText({
+          system,
+          user,
+          temperature: 0.5,
+          maxTokens: 320,
+        });
+        return Response.json({
+          type: "explain",
+          message:
+            text.trim() ||
+            "ごめん、うまく説明が作れなかった。もう一度押してみて。",
+        } satisfies ChatResponse);
+      }
+      case "improve": {
+        const { system, user } = buildImprovePrompt(body);
+        const text = await callHaikuText({
+          system,
+          user,
+          temperature: 0.7,
+          maxTokens: 220,
+        });
+        return Response.json({
+          type: "improve",
+          message:
+            text.trim() ||
+            "今のコードよくできてるよ!次のレッスンでもっと良くしていこう。",
+        } satisfies ChatResponse);
+      }
+      case "summary": {
+        const supabase = getSupabaseServer();
+        const { data, error } = await supabase
+          .from("learning_events")
+          .select("event_type, lesson_id, step_id, metadata, created_at")
+          .eq("session_id", body.sessionId)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        if (error) {
+          console.warn("[chat] summary supabase failed:", error);
+          return Response.json({
+            type: "summary",
+            message:
+              "学習ログが取得できませんでした…少し待ってから試してください。",
+          } satisfies ChatResponse);
+        }
+        const rows = (data ?? []) as Array<{
+          event_type: string;
+          lesson_id: string;
+          step_id: string | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        }>;
+        // Sparseness check: when the learner has barely started, there's
+        // nothing meaningful to summarize. Surface a friendly nudge
+        // instead of asking Claude to fabricate three accomplishments.
+        // Threshold: at least 1 lesson_completed OR at least 3 step_completed.
+        const lessonCompletions = rows.filter(
+          (r) => r.event_type === "lesson_completed",
+        ).length;
+        const stepCompletions = rows.filter(
+          (r) => r.event_type === "step_completed",
+        ).length;
+        if (lessonCompletions === 0 && stepCompletions < 3) {
+          return Response.json({
+            type: "summary",
+            message: SUMMARY_TOO_EARLY_MESSAGE,
+          } satisfies ChatResponse);
+        }
+        // Has data: ask Claude for the 3-bullet retrospective.
+        const recentEvents = formatEventsForSummary(rows);
+        const { system, user } = buildSummaryPrompt({
+          stepId: body.stepId,
+          recentEvents,
+        });
+        const text = await callHaikuText({
+          system,
+          user,
+          temperature: 0.6,
+          maxTokens: 360,
+        });
+        return Response.json({
+          type: "summary",
+          message: text.trim() || SUMMARY_TOO_EARLY_MESSAGE,
+        } satisfies ChatResponse);
+      }
+      case "diagnose": {
+        // Diagnose intentionally does NOT advance the step. If the regex
+        // already passes, surface a canned message that points at the
+        // judge button so the learner stays in control of progression.
+        const passes = matchStep(body.stepId, body.code);
+        if (passes) {
+          return Response.json({
+            type: "diagnose",
+            message: DIAGNOSE_ALREADY_PASSING_MESSAGE,
+          } satisfies ChatResponse);
+        }
+        const { system, user } = buildDiagnosePrompt(body);
+        const text = await callHaikuText({
+          system,
+          user,
+          temperature: 0.4,
+          maxTokens: 240,
+        });
+        return Response.json({
+          type: "diagnose",
+          message:
+            text.trim() ||
+            "うーん、うまく差分を指摘できなかった。指示文をもう一度読み直してみて。",
         } satisfies ChatResponse);
       }
     }

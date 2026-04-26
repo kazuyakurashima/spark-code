@@ -26,11 +26,44 @@ export type ChatRequestQuestion = {
   question: string;
 };
 
+/** §9.3「やさしく説明して」/ §9.7.1 — 主要概念をやさしく説明する */
+export type ChatRequestExplain = {
+  type: "explain";
+  stepId: string;
+  code: string;
+};
+
+/** §9.3「もっと良くしたい」/ §9.7.5 — 次レッスンの予告 */
+export type ChatRequestImprove = {
+  type: "improve";
+  stepId: string;
+  code: string;
+};
+
+/** §9.3「できたことを教えて」/ §9.7.3 — learning_events から 3 つ抽出 */
+export type ChatRequestSummary = {
+  type: "summary";
+  stepId: string;
+  /** localStorage の sparkcode.sessionId(report と同じ系統) */
+  sessionId: string;
+};
+
+/** §9.3「どこが違う?」/ §9.7.2 不正解分岐 — 進行はしない */
+export type ChatRequestDiagnose = {
+  type: "diagnose";
+  stepId: string;
+  code: string;
+};
+
 export type ChatRequest =
   | ChatRequestJudge
   | ChatRequestHint
   | ChatRequestPraise
-  | ChatRequestQuestion;
+  | ChatRequestQuestion
+  | ChatRequestExplain
+  | ChatRequestImprove
+  | ChatRequestSummary
+  | ChatRequestDiagnose;
 
 export type ChatResponseJudge = {
   type: "judge";
@@ -39,7 +72,14 @@ export type ChatResponseJudge = {
 };
 
 export type ChatResponseTextual = {
-  type: "hint" | "praise" | "question";
+  type:
+    | "hint"
+    | "praise"
+    | "question"
+    | "explain"
+    | "improve"
+    | "summary"
+    | "diagnose";
   message: string;
 };
 
@@ -58,7 +98,16 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  kind: "judge" | "hint" | "praise" | "question" | "error";
+  kind:
+    | "judge"
+    | "hint"
+    | "praise"
+    | "question"
+    | "explain"
+    | "improve"
+    | "summary"
+    | "diagnose"
+    | "error";
   /** Only set for kind === "judge". */
   correct?: boolean;
 };

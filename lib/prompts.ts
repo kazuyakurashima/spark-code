@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getStep } from "./lessons";
+import { getLesson, getStep } from "./lessons";
 import { getSolution } from "./lessons-server";
 
 /**
@@ -207,3 +207,162 @@ ${code}
 ${question}`,
   };
 }
+
+/**
+ * explain prompt: §9.7.1 先生(常設ボタン「やさしく説明して」)。
+ * 質問が無いまま「今のレッスンの主要概念を教えてほしい」と言われたとき用。
+ * 自由質問(question)とほぼ同じ仕事だが、user が質問文を持たないので
+ * **常に「現在のレッスンの主要概念」をやさしく説明する**ことに固定する。
+ */
+export function buildExplainPrompt({
+  stepId,
+  code,
+}: {
+  stepId: string;
+  code: string;
+}): PromptPair {
+  return {
+    system: `${COMMON_TONE}${FORMATTING}
+
+あなたの仕事(explain / やさしく説明して):
+- 現在のレッスンの **主要概念** を、初心者向けにやさしく説明する
+- **3-5 行**で
+- 技術名は **必ず意味を添える**(例: \`<h1>\` (見出しタグ))
+- **例を 1 つ**示す(短く。完成形を全部書かない)
+- できれば、いま画面に書いてあるコードに紐づけて説明する
+- JSON は不要。**プレーンな文だけ**`,
+    user: `${stepContext(stepId)}
+
+学習者の現在のコード:
+\`\`\`
+${code}
+\`\`\`
+
+このレッスンの主要概念を、3-5 行でやさしく説明してください。`,
+  };
+}
+
+/**
+ * improve prompt: §9.7.5 ナビゲーター改善版(常設ボタン「もっと良くしたい」)。
+ * - 現在のコードでよくできている点を 1 行で認める
+ * - 次レッスンで実現できる「もっと良くする 1 つの提案」を予告する
+ * - **具体的なコードは絶対に示さない**(予告だけ)
+ *
+ * 現在のレッスンが最終手前なら次レッスンを参照、最終なら 2 周目 / 3 周目の
+ * 入口に向けた抽象的な予告に倒す。
+ */
+export function buildImprovePrompt({
+  stepId,
+  code,
+}: {
+  stepId: string;
+  code: string;
+}): PromptPair {
+  const found = getStep(stepId);
+  const nextLesson = found ? getLesson(found.lesson.id + 1) : undefined;
+  const nextLessonInfo = nextLesson
+    ? `次のレッスン: Lesson ${nextLesson.id} 「${nextLesson.title}」(${nextLesson.concept})`
+    : `次のレッスンはまだ用意されていない(周回の最終付近)。「もっと良くする」は周回全体の予告として返してOK`;
+  return {
+    system: `${COMMON_TONE}${FORMATTING}
+
+あなたの仕事(improve / もっと良くしたい):
+- いまのコードで **よくできている点** を 1 行で認める
+- **次のレッスン** で実現できる「もっと良くする 1 つの提案」を予告する
+- **具体的なコードは絶対に示さない**(予告 / お楽しみとして残す)
+- 全体で 2-3 行
+- JSON は不要。**プレーンな文だけ**`,
+    user: `${stepContext(stepId)}
+
+学習者の現在のコード:
+\`\`\`
+${code}
+\`\`\`
+
+${nextLessonInfo}
+
+「いまよくできている点」と「次のレッスンで実現できる 1 つの予告」を返してください。`,
+  };
+}
+
+/**
+ * summary prompt: §9.7.3 応援者(常設ボタン「できたことを教えて」)。
+ * - learning_events 直近 20 件を渡す
+ * - 3 つの「できるようになったこと」を抽出
+ * - 過去形で「○○ができるようになりましたね」
+ * - 最後に 1 行、励ましのコメント
+ */
+export function buildSummaryPrompt({
+  stepId,
+  recentEvents,
+}: {
+  stepId: string;
+  recentEvents: string;
+}): PromptPair {
+  return {
+    system: `${COMMON_TONE}${FORMATTING}
+
+あなたの仕事(summary / できたことを教えて):
+- 渡された学習ログから、学習者が **できるようになったこと** を **3 つ** 抽出する
+- 各項目は「○○ができるようになりましたね」と **過去形** で
+- 抽出のヒント:
+  - 完了したレッスン
+  - 苦労した後にクリアしたステップ(judge_executed の incorrect 多めから correct への遷移)
+  - 自分から質問して解決した内容(question_asked)
+- 最後に 1 行、**具体的な** 励ましのコメントを添える(「がんばろう」のような抽象では不可)
+- 出力は Markdown 箇条書き(\`-\` で 3 項目)+ 1 行コメント。JSON は不要。`,
+    user: `${stepContext(stepId)}
+
+学習者の最近の学習ログ(直近 20 件、新しい順):
+${recentEvents}
+
+このログから、3 つの「できるようになったこと」を箇条書きで抽出して、
+最後に 1 行の励ましを添えて返してください。`,
+  };
+}
+
+/** summary が「ログがまだ少ない」と判断したときの fallback メッセージ。 */
+export const SUMMARY_TOO_EARLY_MESSAGE =
+  "まだ振り返るには早いね!Lesson 1 を 1 つでもクリアすると、できたことを 3 つ振り返れるようになります。もう少しレッスンを進めてから、また聞きにきてください。";
+
+/**
+ * diagnose prompt: §9.7.2 不正解分岐 / §9.3「どこが違う?」ボタン。
+ * - 学習者のコードを正解パターンと比較し、**差分を 1 か所だけ** 指摘
+ * - できている部分は必ず認める
+ * - **修正例を 1 行** 示す(全部書かない)
+ * - 進行はあなたが起こさない(学習者が直してから「答え合わせする」を押す)
+ */
+export function buildDiagnosePrompt({
+  stepId,
+  code,
+}: {
+  stepId: string;
+  code: string;
+}): PromptPair {
+  const solution = getSolution(stepId);
+  return {
+    system: `${COMMON_TONE}${FORMATTING}
+
+あなたの仕事(diagnose / どこが違う?):
+- 学習者のコードを **正解パターン** と比較し、**差分を 1 か所だけ** 指摘する
+- できている部分があれば必ず認めてから、惜しい点に触れる
+- **修正例を 1 行**示す(全部書かない、ヒント程度)
+- 複数の問題があっても、**最重要なもの 1 か所だけ**
+- 「間違っている」とは言わない。「惜しい」「あと一歩」「ここを変えると良いかも」
+- **進行はあなたが起こさない**。学習者が直してから「答え合わせする」を押すと進む流れ
+- JSON は不要。**プレーンな文だけ**(2-4 行)`,
+    user: `${stepContext(stepId)}
+模範解答(参考、表に出さない): ${solution ?? "(なし)"}
+
+学習者の現在のコード:
+\`\`\`
+${code}
+\`\`\`
+
+どこが違うか、1 か所だけ指摘してください。`,
+  };
+}
+
+/** diagnose が「正解パターンに当たっている」を検出したときの canned 返答。 */
+export const DIAGNOSE_ALREADY_PASSING_MESSAGE =
+  "今のコードは合格パターンに当たっています!**「答え合わせする」** を押すと次のステップに進めますよ。";
