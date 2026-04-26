@@ -77,6 +77,37 @@
 - コミット:
   - (T1 単独コミットの sha は本ファイルの commit と同タイミングで記録)
 
+## T2: Preview コンポーネントの動的設定対応(sandbox 切替 / scaffold 注入)
+
+- 対応要件: §6 L4 / §6 L5 / §10.3 / §16.2
+- 実装内容:
+  - Preview の Props を `{code, previewCss}` から `{code, lesson}` に変更し、レッスンメタを直接受け取る形に
+  - `buildSrcDoc(code, lesson)`:
+    - `scaffold.beforeHtml` / `scaffold.afterHtml` で学習者コードを挟む
+    - `previewMode === "html+css+js"` のときだけ `<script>` ブロックを生成
+    - `editorLanguage === "javascript"` のときは学習者コードを `<script>` 側に流し、HTML 側には載せない(Lesson 5 想定)
+  - `sandboxFor(lesson)`: `html+css+js` のときだけ `"allow-scripts"`、それ以外は素の `""`(最小権限の原則)
+  - LessonWorkspace の Preview 呼び出しを `code + lesson` 形式に更新
+  - 学習者コードと scaffold の境界を `<!-- learner-code-begin/end -->` / `<!-- scaffold-begin/end -->` HTML コメントで識別可能に(将来のデバッグ用)
+- 主な変更ファイル:
+  - `components/Preview.tsx`
+  - `components/LessonWorkspace.tsx`
+- 要件定義書との差分:
+  - **なし**
+- 差分がある場合の理由:
+  - (該当なし)
+- 連動 / 未対応 TODO:
+  - T5(Lesson 4)で `<style>` を含む学習者コードがそのまま srcDoc に流れることを確認する
+  - T6(Lesson 5)で `editorLanguage: "javascript"` + scaffold.beforeHtml + scaffold.js の組み合わせを Lesson データ側で検証する
+  - 現時点で Lesson 1 は `previewMode: "html"`, scaffold 未指定なので、ルートは旧仕様と完全互換
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - dev で `/lesson/1` 動作確認: 200 / `sandbox=""` 1 件 / `sandbox="allow-scripts"` 0 件 / `<h1>名前</h1>` で judge → `correct: true`
+  - tsc / lint クリーン
+- コミット:
+  - (T2 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)

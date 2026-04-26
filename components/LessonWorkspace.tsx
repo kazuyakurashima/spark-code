@@ -339,7 +339,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         />
       }
       center={<CodeEditor value={code} onChange={handleCodeChange} />}
-      rightTop={<Preview code={code} previewCss={lesson.previewCss} />}
+      rightTop={<Preview code={code} lesson={lesson} />}
       rightBottom={
         <ChatPanel
           messages={messages}
