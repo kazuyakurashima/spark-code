@@ -80,12 +80,23 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
           setState({ kind: "error", message: json.error });
           return;
         }
-        if (!json.lessonCompleted && attempt < RETRY_DELAYS_MS.length) {
-          const delay = RETRY_DELAYS_MS[attempt];
-          attempt += 1;
-          setTimeout(() => {
-            if (!cancelled) void fetchOnce();
-          }, delay);
+        if (!json.lessonCompleted) {
+          if (attempt < RETRY_DELAYS_MS.length) {
+            const delay = RETRY_DELAYS_MS[attempt];
+            attempt += 1;
+            setTimeout(() => {
+              if (!cancelled) void fetchOnce();
+            }, delay);
+            return;
+          }
+          // Retry budget exhausted but the lesson_completed event still
+          // hasn't been recorded. Surface this honestly instead of
+          // rendering a "ready" report with partial counts.
+          setState({
+            kind: "error",
+            message:
+              "完了イベントの記録がまだ届いていません。少し待ってからページを再読み込みしてみてください。",
+          });
           return;
         }
         setState({ kind: "ready", data: json });

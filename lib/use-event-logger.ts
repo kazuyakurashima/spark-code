@@ -180,6 +180,10 @@ export function useEventLogger(lessonId: string) {
   const resetSession = useCallback((): string => {
     const next = rotateStoredSessionId();
     sessionIdRef.current = next;
+    // Clear the code_changed throttle so the first edit of the next
+    // round emits immediately rather than silently being absorbed by
+    // the previous round's 5s window.
+    lastCodeChangeAtRef.current = 0;
     setSessionId(next);
     return next;
   }, []);

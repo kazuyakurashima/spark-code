@@ -6,11 +6,15 @@ import type { LearningEventType } from "@/types/supabase";
 export const runtime = "nodejs";
 
 /**
- * Reject requests that don't come from our own origin. Browsers always
- * attach Origin on cross-origin POSTs; same-origin POSTs from the
- * deployed site also include it. Server-to-server abusers (curl, scripts)
- * either omit Origin or send a host that doesn't match our own — those
- * get a 403.
+ * Reject requests that don't come from our own origin. This is a
+ * **shallow CSRF/drive-by check, not real auth** — anyone scripting a
+ * client can forge a matching Origin header and pass. It blocks naive
+ * curl/bot abuse and keeps casual third-party embeds from writing,
+ * but not a determined attacker.
+ *
+ * Real hardening (rate limiting / HMAC-signed tokens / per-session
+ * insert quota) is tracked as Phase 3 work; until then the route's
+ * write power is also constrained by RLS via the anon client.
  */
 function isAllowedOrigin(request: NextRequest): boolean {
   const host = request.headers.get("host");
