@@ -16,3 +16,16 @@ body {
   color: #e2e8f0;
   font-family: var(--font-sans);
 }
+
+/* Reused by the step-advance notice banner. Kept in globals so any
+   future "step transitioned" surface can use the same motion. */
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -65,6 +65,11 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState<BusyKind>(null);
+  // Transient banner shown in the lesson panel for ~3.5s after a
+  // successful step advance, so the transition isn't silent.
+  const [advanceNotice, setAdvanceNotice] = useState<
+    { fromTitle: string; toStepId: string; toTitle: string } | null
+  >(null);
 
   const currentStep = lesson.steps[stepIndex];
   const isLastStep = stepIndex === lesson.steps.length - 1;
@@ -104,6 +109,14 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
       log.lessonCompleted();
     }
   }, [currentStep.id, isLastStep, log]);
+
+  // Auto-clear the advance banner. The 3.5s window is long enough to
+  // read but short enough that it's gone before the next click.
+  useEffect(() => {
+    if (!advanceNotice) return;
+    const id = setTimeout(() => setAdvanceNotice(null), 3500);
+    return () => clearTimeout(id);
+  }, [advanceNotice]);
 
   const appendMessage = useCallback((m: ChatMessage) => {
     setMessages((prev) => [...prev, m]);
@@ -155,7 +168,20 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           // source of truth, so a praise failure must NOT roll back progress.
           const judgedStepId = currentStep.id;
           const judgedCode = code;
-          setStepIndex((i) => Math.min(i + 1, lesson.steps.length - 1));
+          const fromStep = currentStep;
+          const nextIdx = Math.min(stepIndex + 1, lesson.steps.length - 1);
+          const toStep = lesson.steps[nextIdx];
+          setStepIndex(nextIdx);
+          // Only show the banner when we actually move to another step.
+          // Reaching the final step replaces the panel with the clear
+          // report, which is its own visible transition.
+          if (nextIdx !== stepIndex && nextIdx < lesson.steps.length - 1) {
+            setAdvanceNotice({
+              fromTitle: fromStep.title,
+              toStepId: toStep.id,
+              toTitle: toStep.title,
+            });
+          }
           callChat({ type: "praise", stepId: judgedStepId, code: judgedCode })
             .then((praiseResp) => {
               if (praiseResp.type === "praise") {
@@ -191,7 +217,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, isLastStep, currentStep.id, code, appendMessage, log, lesson.steps.length]);
+  }, [busy, isLastStep, currentStep, stepIndex, code, appendMessage, log, lesson.steps]);
 
   const handleHint = useCallback(async () => {
     if (busy) return;
@@ -279,20 +305,21 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     [busy, currentStep.id, code, appendMessage, log],
   );
 
-  // "2周目を始める" → reset workspace state AND mint a fresh session id.
-  // Round-1 events stay in the DB but become unreferenced from the UI;
-  // the next round's events (and the next clear report) are scoped to
-  // the new session id, so the report shows this attempt only.
+  // "もう一度挑戦する" → reset workspace state AND mint a fresh session id.
+  // Earlier events stay in the DB but become unreferenced from the UI;
+  // the next attempt's events (and the next clear report) are scoped
+  // to the new session id, so the report shows this attempt only.
   const handleRestart = useCallback(() => {
     setCode("");
     setMessages([]);
     setStepIndex(0);
+    setAdvanceNotice(null);
     judgeAttemptsRef.current = {};
     lessonStartedRef.current = false;
     lessonCompletedRef.current = false;
     prevStepIdRef.current = lesson.steps[0].id;
     log.resetSession();
-    // Re-emit lesson_started + step_started for the new round so the
+    // Re-emit lesson_started + step_started for the new attempt so the
     // next report has the correct scope.
     log.lessonStarted();
     log.stepStarted(lesson.steps[0].id);
@@ -308,6 +335,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           isJudging={busy === "judge"}
           sessionId={log.sessionId}
           onRestart={handleRestart}
+          advanceNotice={advanceNotice}
         />
       }
       center={<CodeEditor value={code} onChange={handleCodeChange} />}

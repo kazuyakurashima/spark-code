@@ -45,8 +45,14 @@ type Props = {
   isJudging: boolean;
   /** localStorage session id; empty during SSR / first render. */
   sessionId: string;
-  /** "2周目を始める" button handler from the workspace. */
+  /** "もう一度挑戦する" button handler from the workspace. */
   onRestart: () => void;
+  /**
+   * Set when judge has just advanced the learner one step. The panel
+   * shows a transient banner above the instruction so the transition
+   * isn't silent. Cleared by the workspace after a few seconds.
+   */
+  advanceNotice: { fromTitle: string; toStepId: string; toTitle: string } | null;
 };
 
 export function LessonPanel({
@@ -56,6 +62,7 @@ export function LessonPanel({
   isJudging,
   sessionId,
   onRestart,
+  advanceNotice,
 }: Props) {
   const currentStep = lesson.steps[currentStepIndex];
   const isLast = currentStepIndex === lesson.steps.length - 1;
@@ -107,6 +114,24 @@ export function LessonPanel({
           );
         })}
       </ol>
+
+      {advanceNotice && (
+        <div
+          // Re-key on toStepId so React re-mounts the node and the
+          // fade-in animation replays for back-to-back advances.
+          key={advanceNotice.toStepId}
+          role="status"
+          aria-live="polite"
+          className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 motion-safe:animate-[fade-in-down_220ms_ease-out_both]"
+        >
+          <p className="font-semibold">
+            ✓ {advanceNotice.fromTitle} が完了!
+          </p>
+          <p className="text-xs text-emerald-200/80 mt-0.5">
+            次は <span className="font-mono opacity-80">Step {advanceNotice.toStepId}</span> 「{advanceNotice.toTitle}」に進みます。
+          </p>
+        </div>
+      )}
 
       <section className="rounded-2xl bg-slate-800/60 border border-slate-700/60 p-5">
         <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">
