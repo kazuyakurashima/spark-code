@@ -287,6 +287,44 @@
 - コミット:
   - (T8 単独コミットの sha は commit と同タイミングで記録)
 
+## T9: 既存プロンプト 4 種を §9.7 準拠に改修(judge / hint / praise / question)
+
+- 対応要件: §9.5 / §9.7.1 / §9.7.2 / §9.7.3 / §9.7.4
+- 実装内容:
+  - `COMMON_TONE` を §9.5 の 6 規定に揃えて書き直し:
+    - **「間違っている」は使わない、代わりに「惜しい」「あと一歩」「いい感じ」**(明示)
+    - 技術名は **必ず意味も添える**(例として `<h1>` (見出しタグ)を本文に明記)
+    - 「がんばろう」だけの抽象励ましを禁止
+    - 長さは **3〜5 行が目安**(従来は「3〜4 文以内」、§9.5 の「行」基準に修正)
+  - `stepContext()` に `今やること: ${concept}` を追加し、explain prompt(T10)にも自然に流せる形に
+  - judge prompt: §9.7.2 正解分岐に整合 — 「合格を前提に何が良かったかを 2 行で具体的に褒める / コードの具体的な箇所(タグ・色名・名前など)に触れる」を明示
+  - praise prompt: 既存の 1〜2 文の「合格直後の祝福」を維持。**§9.7.3 は summary 用と解釈**(praise はチャット欄の軽い喝采、summary は learning_events から引く 3 点振り返りで別物)
+  - hint prompt: §9.7.4 厳守 — **完成形は絶対に示さない / 次の 1 ステップだけ / 既に書けている部分は触れない / 「次に〜してみましょう」の形 / 必要なら例 1 行**
+  - question prompt: §9.7.1 厳守 — **3-5 行 / 技術名は意味を添える / 例を 1 つ示す / できれば今のコードに紐づけ**
+  - `QUESTION_HINT_FORMATTING` を `FORMATTING` に rename + 文言整理(`<h1>` だけでなく `color` `textContent` などのプロパティ・関数名も対象)
+- 主な変更ファイル:
+  - `lib/prompts.ts`(全面書き直し相当)
+- 要件定義書との差分:
+  - **なし**(§9.7.3 を praise でなく summary 用と解釈した点は、要件本文の「praise / できたことを教えて」の二重ラベルを文脈で振り分けたもの。差分というより要件読解)
+- 連動 / 未対応 TODO:
+  - T10 で explain prompt 追加(stepContext の `今やること: ${concept}` がここで活きる)
+  - T11 で improve prompt 追加(§9.7.5、`next_lesson_title` 連携)
+  - T12 で summary prompt 追加(§9.7.3 を本来の summary 用途で実装)
+  - T13 で diagnose prompt 追加(§9.7.2 の不正解分岐を別ボタン化)
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - baseline(pre-T9)16 シナリオ vs post-T9 16 シナリオを diff:
+    - 行数: 181 → 195(微増、§9.5「3-5 行」誘導の影響)
+    - 「間違って」出現: 0 件(禁句ゼロ維持)
+    - 「惜しい / いい感じ / 完璧 / あと一歩」出現: 5 件(温度感維持)
+    - 技術名注釈の付与頻度が向上(例: `<h1>` (見出しタグ))
+    - 具体性: praise が「コードを変えるとプレビューもすぐ変わるのが見えたでしょ?」のような generic から「`<h1>` (見出しタグ) の色を `color: pink;` で変えられました」のような具体に進化
+  - tsc / lint クリーン
+  - スナップショット保存先: [docs/snapshots/baseline_prompts.md](snapshots/baseline_prompts.md) と [docs/snapshots/post_t9_prompts.md](snapshots/post_t9_prompts.md)
+- コミット:
+  - (T9 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
