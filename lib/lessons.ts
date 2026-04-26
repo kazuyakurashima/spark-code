@@ -109,6 +109,20 @@ p {
 }
 `).trim();
 
+// Lesson 5 stage: same vivid gradient as Lesson 1-3 so the learner's
+// JS-driven text change feels like a "magic" transformation on the
+// already familiar canvas. The default <h1> text shown via scaffold
+// is "かず"; the learner's 1 line rewrites it to whatever they want.
+const LESSON_5_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
+h1 {
+  font-size: clamp(2.5rem, 9vw, 6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+`).trim();
+
 // Lesson 4 stage: a lighter card-like canvas so the learner's
 // `color: ...` actually shows up dramatically. The default text colour
 // is intentionally black/dark so the "before/after" contrast is huge.
@@ -309,6 +323,45 @@ export const lessons: Lesson[] = [
         title: "完成!",
         instruction:
           "Lesson 4 クリア!🎉\n\nCSS の力で、見た目が一瞬で変わったね。今書いた **`<style>`** が CSS の場所、**`color:`** が「文字の色」の指示。これだけで景色が変わる。\n\n次は **JavaScript** で、画面の文字を「あなたのコードで」書き換えてみよう。",
+        hintDefault: "",
+      },
+    ],
+  },
+  {
+    id: 5,
+    round: 1,
+    paid: false,
+    title: "JavaScript で文字を変えよう",
+    overview:
+      "JavaScript は **画面の中身を変える** 言語です。たった 1 行のコードで、表示されている文字を一瞬で書き換えてみよう。",
+    concept: "textContent で要素の文字を書き換える",
+    previewMode: "html+css+js",
+    editorLanguage: "javascript",
+    previewCss: LESSON_5_PREVIEW_CSS,
+    // 学習者には見せない「お膳立て」コード:
+    // - <h1 id="name">かず</h1> を本体側に置いておく
+    // - JS 側で document.querySelector("#name") を `name` にバインド
+    // 学習者はこの `name` を使って textContent に代入する 1 行だけ書く。
+    scaffold: {
+      beforeHtml: '<h1 id="name">かず</h1>',
+      js: 'const name = document.querySelector("#name");',
+    },
+    // 空。エディタは placeholder("ここに JavaScript を書いてみよう")で誘導。
+    starterCode: "",
+    steps: [
+      {
+        id: "5-1",
+        title: "1 行で文字を書き換えよう",
+        instruction:
+          "JavaScript の世界へようこそ!\n\nエディタに、下の 1 行をそのまま書いてみよう:\n\n```js\nname.textContent = \"こんにちは!\";\n```\n\n意味:\n- `name` は **画面の `<h1>` を指している箱**(裏で用意されているよ)\n- `.textContent` は **「中身の文字」** を表す\n- `=` の右側の文字列が、画面の `<h1>` に書き込まれる\n\n`\"こんにちは!\"` の部分は、好きな言葉に変えても OK。",
+        hintDefault:
+          "`name.textContent = \"...\";` の形をそのまま書こう。クォーテーション(`\"`)で文字を囲むのがポイント。",
+      },
+      {
+        id: "5-2",
+        title: "完成!",
+        instruction:
+          "Lesson 5 クリア!🎉\n\nたった 1 行で、画面の文字が書き換わったね。これが **JavaScript の最初の一歩**。\n\n3 周目では、入力フォームから自分でカードを編集できるところまでいくよ。\n\n次は Lesson 6 で、ここまでの 5 つのレッスンを振り返って、全体像をまとめよう。",
         hintDefault: "",
       },
     ],

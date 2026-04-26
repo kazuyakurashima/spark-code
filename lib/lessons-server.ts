@@ -100,6 +100,22 @@ stepMatchers["4-1"] = (code) => {
 
 stepMatchers["4-2"] = () => true;
 
+// Lesson 5: 学習者の 1 行 JS が `<ident>.textContent = "..."` 系の
+// 代入式を含むこと。
+// - `name.textContent` を期待するが、変数名は厳密に `name` でなくても通す
+//   (scaffold 側で `name` を用意しているので、別名にすると preview は
+//    動かないが、判定文上は寛容にする)
+// - 行コメント `//` とブロックコメント `/* */` を strip してから判定
+// - `name.innerHTML = ...` のような別経路は不合格
+stepMatchers["5-1"] = (code) => {
+  const stripped = code
+    .replace(/\/\/[^\n]*/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  // ident.textContent = "..."  ('...'  `...` も許容)
+  return /[A-Za-z_$][\w$]*\s*\.\s*textContent\s*=\s*['"`]/.test(stripped);
+};
+stepMatchers["5-2"] = () => true;
+
 const stepSolutions: Record<string, string | null> = {
   "1-1": "<h1>名前</h1>",
   "1-2": "<h1>太郎</h1>",
@@ -112,6 +128,8 @@ const stepSolutions: Record<string, string | null> = {
   "4-1":
     "<style>\n  h1 { color: pink; }\n</style>\n<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>",
   "4-2": null,
+  "5-1": 'name.textContent = "こんにちは!";',
+  "5-2": null,
 };
 
 /**

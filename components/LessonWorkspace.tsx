@@ -344,7 +344,13 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           advanceNotice={advanceNotice}
         />
       }
-      center={<CodeEditor value={code} onChange={handleCodeChange} />}
+      center={
+        <CodeEditor
+          value={code}
+          onChange={handleCodeChange}
+          language={lesson.editorLanguage ?? "html"}
+        />
+      }
       rightTop={<Preview code={code} lesson={lesson} />}
       rightBottom={
         <ChatPanel

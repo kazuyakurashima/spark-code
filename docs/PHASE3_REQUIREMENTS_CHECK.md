@@ -190,6 +190,38 @@
 - コミット:
   - (T5 単独コミットの sha は commit と同タイミングで記録)
 
+## T6: Lesson 5(1 行 JS 体験)
+
+- 対応要件: §5.1 #5 / §6 Lesson 5 / §16.2(1 行に留める)
+- 実装内容:
+  - `@codemirror/lang-javascript` を新規インストールし、`CodeEditor` に `language?: "html" | "javascript"` props を追加。エディタ内 syntax highlight が JS でも動く
+  - `LessonWorkspace` から `lesson.editorLanguage` を CodeEditor に流す。デフォルト "html"
+  - Lesson 5: `previewMode: "html+css+js"` + `editorLanguage: "javascript"` + `scaffold.beforeHtml: '<h1 id="name">かず</h1>'` + `scaffold.js: 'const name = document.querySelector("#name");'` + `starterCode: ""`(placeholder + instruction で誘導)
+  - LESSON_5_PREVIEW_CSS は Lesson 1 と同じ vivid gradient を採用(JS による文字変化のドラマを最大化)
+  - matcher: 行/ブロックコメントを strip 後、`/[A-Za-z_$][\w$]*\s*\.\s*textContent\s*=\s*['"`]/` で検出。`name` に限定せず `el.textContent = "x"` のような書き方も合格(scaffold は `name` を提供するが、判定上は寛容)
+  - Phase 1 で導入した `escapeForScriptBody` を継続使用(scaffold + 学習者 JS 両方を escape)
+- 主な変更ファイル:
+  - `package.json` / `package-lock.json` (`@codemirror/lang-javascript` 追加)
+  - `components/CodeEditor.tsx`
+  - `components/LessonWorkspace.tsx`
+  - `lib/lessons.ts`
+  - `lib/lessons-server.ts`
+- 要件定義書との差分:
+  - **なし**(§16.2「1 行に留める」「`addEventListener` / `querySelector` / `input.value` を学習者に書かせない」を厳守)
+- 連動 / 未対応 TODO:
+  - Lesson 12-14(Phase 3.4)で `addEventListener` を導入する際、`editorLanguage` の切替パターンが既に確立しているので素直に拡張できる
+  - matcher のコメント strip は naive(`"// not a comment"` のような文字列内に `//` が含まれるケースで誤動作)。完全初心者の使い方では実害なしと判断
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 8 つのエッジケース通過(基本/スペース無し/値なし/コメントアウト/innerHTML/別ident/改行/空コード)
+  - sandbox="allow-scripts" が iframe に正しく付与(curl で確認)
+  - scaffold beforeHtml + js が srcDoc に正しく注入(curl で確認)
+  - Lesson 1〜4 回帰なし(`/lesson/1` 200 OK)
+  - tsc / lint クリーン
+- コミット:
+  - (T6 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
