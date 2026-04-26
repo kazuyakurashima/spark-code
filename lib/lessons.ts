@@ -8,11 +8,57 @@ export type LessonStep = {
   hintDefault: string;
 };
 
+/** §4 / §5: 1 周目=全体像, 2 周目=整える, 3 周目=動かす. */
+export type LessonRound = 1 | 2 | 3;
+
+/**
+ * §6 Lesson 4 / Lesson 5 / §10.3:
+ * - "html" : 学習者は HTML のみ。`<style>`/`<script>` は受け付けるが扱わない
+ * - "html+css" : `<style>` を含む HTML を許容(Lesson 4)
+ * - "html+css+js" : iframe で `<script>` を実行(sandbox=allow-scripts)
+ */
+export type LessonPreviewMode = "html" | "html+css" | "html+css+js";
+
+/** どの言語で CodeMirror を立ち上げるか。デフォルトは "html"。 */
+export type LessonEditorLanguage = "html" | "javascript";
+
+/**
+ * プレビュー iframe に学習者コードと一緒に注入される、教材側の「お膳立て」。
+ * §16.2 の通り、Lesson 5 の `document.querySelector` 等はここに置き、
+ * 学習者には書かせない。
+ */
+export type LessonScaffold = {
+  /** 学習者コードの **前** に <body> 内へ差し込む HTML。 */
+  beforeHtml?: string;
+  /** 学習者コードの **後** に <body> 内へ差し込む HTML。 */
+  afterHtml?: string;
+  /**
+   * `<script>` ブロックの先頭に挿入する JS。previewMode が
+   * "html+css+js" のときのみ実行される。学習者の JS はこの後に走る。
+   */
+  js?: string;
+};
+
 export type Lesson = {
   id: number;
+  /** §4 / §5.1 */
+  round: LessonRound;
+  /** §5.3: false=無料(Lesson 1-6), true=SparkPlus(Lesson 7+) */
+  paid: boolean;
   title: string;
   overview: string;
+  /** §3.1: 1 レッスン 1 新概念。Sparkコーチの explain で使う。 */
+  concept: string;
+  /** §10.3 / §16.2 */
+  previewMode: LessonPreviewMode;
+  /** デフォルト "html"。Lesson 5 などで "javascript"。 */
+  editorLanguage?: LessonEditorLanguage;
+  /** §10.3: 各レッスンに事前に当てるレッスンレベルのプリセット CSS。 */
   previewCss: string;
+  /** §16.2: 学習者には見えない、レッスンが用意するお膳立てコード。 */
+  scaffold?: LessonScaffold;
+  /** レッスンを開いたときにエディタへ初期表示する内容。空ならエディタも空。 */
+  starterCode?: string;
   steps: LessonStep[];
 };
 
@@ -41,9 +87,13 @@ h1 {
 export const lessons: Lesson[] = [
   {
     id: 1,
+    round: 1,
+    paid: false,
     title: "名前を画面に表示しよう",
     overview:
       "HTML の `<h1>` タグを使って、画面に自分の名前を表示します。これだけで、こんなに綺麗な画面が作れるよ。",
+    concept: "<h1> タグで見出しを表示する",
+    previewMode: "html",
     previewCss: LESSON_1_PREVIEW_CSS,
     steps: [
       {
