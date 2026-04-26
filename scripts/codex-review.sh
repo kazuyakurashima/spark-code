@@ -68,7 +68,10 @@ fi
 # Check filenames for secrets
 # Match actual secret files, not substrings like "SecretSanta.tsx"
 SENSITIVE_PATTERNS='\.env$|\.env\.|^\.?credentials$|^\.?secret$|\.secrets\.|\.pem$|\.key$|id_rsa|id_ed25519'
-SENSITIVE_FILES=$(echo "$STAGED_FILES" | grep -iE "$SENSITIVE_PATTERNS" || true)
+# Templates (.example/.template/.sample suffixes) are tracked on purpose
+# and don't carry secrets — exclude them so .env.local.example doesn't
+# block reviews.
+SENSITIVE_FILES=$(echo "$STAGED_FILES" | grep -iE "$SENSITIVE_PATTERNS" | grep -ivE '\.(example|template|sample)$' || true)
 if [ -n "$SENSITIVE_FILES" ]; then
     echo "ERROR: Sensitive files detected in staged changes:"
     echo "$SENSITIVE_FILES"
@@ -77,7 +80,11 @@ fi
 
 # Check diff content for secret patterns (exclude this script itself)
 DIFF_CONTENT=$(git diff --staged -- ':!scripts/codex-review.sh')
-SECRET_CONTENT_PATTERNS='SUPABASE_SERVICE_ROLE_KEY=|API_KEY=|API_SECRET=|PRIVATE_KEY=|BEGIN PRIVATE KEY|BEGIN RSA PRIVATE KEY|DATABASE_URL=|OPENAI_API_KEY=|ANTHROPIC_API_KEY=[A-Za-z0-9-]|AWS_SECRET_ACCESS_KEY=|GITHUB_TOKEN='
+# Each `KEY=` pattern requires a non-whitespace character after `=` so
+# empty placeholders in templates (e.g. .env.local.example) don't trip
+# the scanner. BEGIN markers stay unconditional — those only appear in
+# real key files.
+SECRET_CONTENT_PATTERNS='SUPABASE_SERVICE_ROLE_KEY=[^[:space:]]|API_KEY=[^[:space:]]|API_SECRET=[^[:space:]]|PRIVATE_KEY=[^[:space:]]|BEGIN PRIVATE KEY|BEGIN RSA PRIVATE KEY|DATABASE_URL=[^[:space:]]|OPENAI_API_KEY=[^[:space:]]|ANTHROPIC_API_KEY=[A-Za-z0-9-]|AWS_SECRET_ACCESS_KEY=[^[:space:]]|GITHUB_TOKEN=[^[:space:]]'
 SECRET_HITS=$(echo "$DIFF_CONTENT" | grep -nE '^\+' | grep -iE "$SECRET_CONTENT_PATTERNS" || true)
 if [ -n "$SECRET_HITS" ]; then
     echo "ERROR: Secret-like content detected in staged diff:"
