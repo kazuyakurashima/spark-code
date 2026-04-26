@@ -163,6 +163,33 @@
 - コミット:
   - (T4 単独コミットの sha は commit と同タイミングで記録)
 
+## T5: Lesson 4(色を変える、`<style>` 導入)
+
+- 対応要件: §5.1 #4 / §6 Lesson 4 / §3.5
+- 実装内容:
+  - Lesson 4 専用 `LESSON_4_PREVIEW_CSS`: 背景を白系(`#f8fafc`)、`<h1>` の初期 `color: black`、`<p>` `<li>` は slate-600 系。「初期は地味、CSS で色を変えると激変」というコントラストを優先(BASE_PREVIEW_CSS の gradient とは別ステージ)
+  - Lesson 4 を 2 ステップ構成(4-1: 見出しの色を変える / 4-2: 完成)
+  - `previewMode: "html+css"`(現状の Preview 動作は `html` と同じだが、意図を型で表明)
+  - `starterCode` は **空の `<style></style>`** + 前レッスンまでの HTML。学習者は `<style>` の中に CSS ルールを 1 行書くだけで進める設計
+  - `concept: "<style> タグに CSS を書いて文字色を変える"`、§3.5 を意識して overview / instruction 文では「色」「見せ方」を先に出し、`<style>` / `color` の技術名は後段に登場
+  - matcher: `<style>...</style>` 内に `color:` 宣言があり、値が黒系(`black` / `#000` / `#000000` / `rgb(0,0,0)` / `rgba(0,0,0,1)` / `rgb(0%,0%,0%)` / `hsl(0,0%,0%)`)以外。`background-color` 等は `(?:^|[^-])color` で除外
+  - `lessons-server.ts` の matcher / solution に `4-1` / `4-2` を追加
+- 主な変更ファイル:
+  - `lib/lessons.ts`
+  - `lib/lessons-server.ts`
+- 要件定義書との差分:
+  - **なし**(§6 Lesson 4 の判定文「`<style>` 内に `color` プロパティが存在し、初期値(black)以外」を素直に実装)
+- 連動 / 未対応 TODO:
+  - Lesson 7(Phase 3.3 後半)で `<div class="card">` を導入するときに、白背景ベースの Lesson 4 stage はカード装飾の前段階として接続しやすい
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 9 つのエッジケース通過(`pink` 合格 / `black` 不合格 / `#ff0000` 合格 / 空 style 不合格 / style 無し 不合格 / `font-size` のみ 不合格 / `#000000` 不合格 / `background-color` のみ 不合格 / mixed `background-color` + `color` 合格)
+  - tsc / lint クリーン
+  - `/lesson/4` 200 OK
+- コミット:
+  - (T5 単独コミットの sha は commit と同タイミングで記録)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)

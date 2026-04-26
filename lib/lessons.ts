@@ -109,6 +109,52 @@ p {
 }
 `).trim();
 
+// Lesson 4 stage: a lighter card-like canvas so the learner's
+// `color: ...` actually shows up dramatically. The default text colour
+// is intentionally black/dark so the "before/after" contrast is huge.
+const LESSON_4_PREVIEW_CSS = `
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f8fafc;
+  color: #1f2937;
+  font-family: "Inter", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+  text-align: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+h1 {
+  font-size: clamp(2rem, 7vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+  color: black;
+}
+p {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  line-height: 1.7;
+  color: #4b5563;
+  max-width: 36ch;
+  margin: 0 auto 1.25rem;
+}
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 24ch;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+li {
+  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
+  line-height: 1.4;
+  color: #4b5563;
+}
+`.trim();
+
 // Lesson 3: adds list styling. Bullets removed for a cleaner card look,
 // items spaced and the whole list constrained to a readable width.
 const LESSON_3_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
@@ -233,6 +279,36 @@ export const lessons: Lesson[] = [
         title: "完成!",
         instruction:
           "Lesson 3 クリア!🎉\n\n名前・自己紹介・好きなものリストで、ページが立体的になってきたね。\n\n次は **色** を変えて、見た目に変化を加えよう。",
+        hintDefault: "",
+      },
+    ],
+  },
+  {
+    id: 4,
+    round: 1,
+    paid: false,
+    title: "色を変えてみよう",
+    overview:
+      "ここまでは中身(HTML)を作ってきました。今度はそれを **どう見せるか**(CSS)を変えます。`<style>` タグの中に書いた CSS で、文字の色が一瞬で変わります。",
+    concept: "<style> タグに CSS を書いて文字色を変える",
+    previewMode: "html+css",
+    previewCss: LESSON_4_PREVIEW_CSS,
+    starterCode:
+      "<style>\n\n</style>\n<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n<ul>\n  <li>司馬遼太郎</li>\n  <li>歴史</li>\n  <li>ジャズ</li>\n</ul>\n",
+    steps: [
+      {
+        id: "4-1",
+        title: "見出しの色を変えよう",
+        instruction:
+          "`<style>` の中に **CSS のルール** を 1 つ書きます。下の例のように `h1` の色を、好きな色に変えてみよう。\n\n```css\nh1 { color: pink; }\n```\n\n色の名前は `pink` / `blue` / `red` / `green` などの英単語、または `#ff0066` のような色コードでも OK。**黒以外** ならどんな色でもクリアだよ。",
+        hintDefault:
+          "`<style>` と `</style>` の間の行に `h1 { color: pink; }` のように書いてみて。`h1` のあと、半角スペース、`{`、`color:`、好きな色、`;`、`}` の順番。",
+      },
+      {
+        id: "4-2",
+        title: "完成!",
+        instruction:
+          "Lesson 4 クリア!🎉\n\nCSS の力で、見た目が一瞬で変わったね。今書いた **`<style>`** が CSS の場所、**`color:`** が「文字の色」の指示。これだけで景色が変わる。\n\n次は **JavaScript** で、画面の文字を「あなたのコードで」書き換えてみよう。",
         hintDefault: "",
       },
     ],

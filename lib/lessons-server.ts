@@ -32,6 +32,33 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
     return items.every((m) => m[1].trim().length > 0);
   },
   "3-2": () => true,
+  // Lesson 4: <style> 内に「`color:` プロパティが、黒以外の値で設定されている」
+  // - background-color / border-color などの *-color とは区別する
+  // - 複数の color: 宣言があれば、どれか 1 つでも非黒なら合格
+  "4-1": (code) => {
+    const styleMatch = code.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+    if (!styleMatch) return false;
+    const css = styleMatch[1];
+    const colorDecls = Array.from(
+      // (?:^|[^-]) で `background-color` 等を除外
+      css.matchAll(/(?:^|[^-])color\s*:\s*([^;}]+)/gi),
+    );
+    if (colorDecls.length === 0) return false;
+    const blackValues = new Set([
+      "black",
+      "#000",
+      "#000000",
+      "rgb(0,0,0)",
+      "rgba(0,0,0,1)",
+      "rgb(0%,0%,0%)",
+      "hsl(0,0%,0%)",
+    ]);
+    return colorDecls.some((m) => {
+      const v = m[1].trim().toLowerCase().replace(/\s+/g, "");
+      return v.length > 0 && !blackValues.has(v);
+    });
+  },
+  "4-2": () => true,
 };
 
 const stepSolutions: Record<string, string | null> = {
@@ -43,6 +70,9 @@ const stepSolutions: Record<string, string | null> = {
   "3-1":
     "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n<ul>\n  <li>司馬遼太郎</li>\n  <li>歴史</li>\n  <li>ジャズ</li>\n</ul>",
   "3-2": null,
+  "4-1":
+    "<style>\n  h1 { color: pink; }\n</style>\n<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>",
+  "4-2": null,
 };
 
 /**
