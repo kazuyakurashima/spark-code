@@ -100,27 +100,29 @@ stepMatchers["4-1"] = (code) => {
 
 stepMatchers["4-2"] = () => true;
 
-// Lesson 5: 学習者の 1 行 JS が `name.textContent = "..."` を含むこと。
+// Lesson 5: 学習者の 1 行 JS が `name.textContent = "..."` 1 文だけ
+// であること。
 //
 // 規定:
-// - 行頭(or 空白のみ)から始まる行が、丸ごとこの代入文であること。
-//   行内に余計な式を書く `name.textContent = "x" + foo` や、
-//   `window.name.textContent = "x"` のような前置きは弾く。
-// - 変数名は scaffold で定義された `name` のみ(別名にすると preview で
-//   ReferenceError になり「ステップは進むがプレビュー無反応」という
-//   悪い UX を招くため)
-// - 文字列リテラルは **同種クォートで閉じられている** ものだけ合格
+// - コメント strip + trim 後の **全文** が、丸ごとこの代入文であること。
+//   `foo(); name.textContent = "x"` のように他の文を混ぜたり、
+//   `name.textContent = "x" + foo` のように右辺に余計な式を足したりは
+//   不合格(余計な式は実行時エラーや予期しない挙動を招き、§3.1
+//   "1 レッスン 1 新概念" の境界も越える)
+// - 変数名は scaffold で定義された `name` のみ
+// - 文字列リテラルは `"..."` または `'...'` のみ。テンプレートリテラル
+//   (バックティック)は `${...}` 補間で実行時エラーを起こしやすいので
+//   Lesson 5 では受け付けない(JavaScript の §6 L12 以降で導入)
 // - 行コメント `//` とブロックコメント `/* */` は事前に strip
-// - `name.innerHTML = ...` のような別経路は不合格
-//
-// マルチラインフラグ(`/m`)で `^...$` がそれぞれの行の頭/末尾にマッチする。
-const LESSON_5_LINE_RE =
-  /^\s*name\s*\.\s*textContent\s*=\s*("[^"]*"|'[^']*'|`[^`]*`)\s*;?\s*$/m;
+// - `name.innerHTML = ...` のような別プロパティへの代入は不合格
+const LESSON_5_FULL_RE =
+  /^name\s*\.\s*textContent\s*=\s*("[^"\n]*"|'[^'\n]*')\s*;?$/;
 stepMatchers["5-1"] = (code) => {
   const stripped = code
     .replace(/\/\/[^\n]*/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-  return LESSON_5_LINE_RE.test(stripped);
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .trim();
+  return LESSON_5_FULL_RE.test(stripped);
 };
 stepMatchers["5-2"] = () => true;
 
