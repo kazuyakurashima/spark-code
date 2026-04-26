@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getLesson } from "@/lib/lessons";
+import { useEventLogger } from "@/lib/use-event-logger";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
 import { ThreePaneLayout } from "./ThreePaneLayout";
 import { LessonPanel } from "./LessonPanel";
@@ -68,9 +69,54 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const currentStep = lesson.steps[stepIndex];
   const isLastStep = stepIndex === lesson.steps.length - 1;
 
+  const log = useEventLogger(String(lesson.id));
+  // Per-step judge attempt counter; baked into judge_executed.try_count
+  // and step_completed.try_count so the report doesn't have to count
+  // events itself.
+  const judgeAttemptsRef = useRef<Record<string, number>>({});
+  const lessonStartedRef = useRef(false);
+  const lessonCompletedRef = useRef(false);
+  const prevStepIdRef = useRef<string>(currentStep.id);
+
+  // First-mount: lesson_started + step_started for the initial step.
+  useEffect(() => {
+    if (lessonStartedRef.current) return;
+    lessonStartedRef.current = true;
+    log.lessonStarted();
+    log.stepStarted(currentStep.id);
+    // Intentionally only run once per LessonWorkspace mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Step transitions: emit step_completed for the previous step and
+  // step_started for the new one. lesson_completed fires once when we
+  // first reach the last step.
+  useEffect(() => {
+    const prevId = prevStepIdRef.current;
+    if (prevId !== currentStep.id) {
+      const tryCount = judgeAttemptsRef.current[prevId] ?? 1;
+      log.stepCompleted(prevId, tryCount);
+      log.stepStarted(currentStep.id);
+      prevStepIdRef.current = currentStep.id;
+    }
+    if (isLastStep && !lessonCompletedRef.current) {
+      lessonCompletedRef.current = true;
+      log.lessonCompleted();
+    }
+  }, [currentStep.id, isLastStep, log]);
+
   const appendMessage = useCallback((m: ChatMessage) => {
     setMessages((prev) => [...prev, m]);
   }, []);
+
+  // Wrap setCode so code edits flow into the throttled code_changed log.
+  const handleCodeChange = useCallback(
+    (next: string) => {
+      setCode(next);
+      log.codeChanged(currentStep.id, next.length);
+    },
+    [log, currentStep.id],
+  );
 
   const handleJudge = useCallback(async () => {
     if (busy || isLastStep) return;
@@ -93,6 +139,10 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         code,
       });
       if (resp.type === "judge") {
+        const tryCount =
+          (judgeAttemptsRef.current[currentStep.id] ?? 0) + 1;
+        judgeAttemptsRef.current[currentStep.id] = tryCount;
+        log.judgeExecuted(currentStep.id, resp.correct, tryCount);
         appendMessage({
           id: newId(),
           role: "assistant",
@@ -141,12 +191,12 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, isLastStep, currentStep.id, code, appendMessage, lesson.steps.length]);
+  }, [busy, isLastStep, currentStep.id, code, appendMessage, log, lesson.steps.length]);
 
-  // Step 9 will wire these to ChatPanel; defining them now keeps the API stable.
   const handleHint = useCallback(async () => {
     if (busy) return;
     if (isLastStep) return;
+    log.hintRequested(currentStep.id);
     setBusy("hint");
     try {
       const resp = await callChat({
@@ -179,12 +229,13 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, isLastStep, currentStep.id, code, appendMessage]);
+  }, [busy, isLastStep, currentStep.id, code, appendMessage, log]);
 
   const handleQuestion = useCallback(
     async (question: string) => {
       const trimmed = question.trim();
       if (busy || trimmed.length === 0) return;
+      log.questionAsked(currentStep.id, trimmed);
       setBusy("question");
       appendMessage({
         id: newId(),
@@ -225,7 +276,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         setBusy(null);
       }
     },
-    [busy, currentStep.id, code, appendMessage],
+    [busy, currentStep.id, code, appendMessage, log],
   );
 
   return (
@@ -238,7 +289,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           isJudging={busy === "judge"}
         />
       }
-      center={<CodeEditor value={code} onChange={setCode} />}
+      center={<CodeEditor value={code} onChange={handleCodeChange} />}
       rightTop={<Preview code={code} previewCss={lesson.previewCss} />}
       rightBottom={
         <ChatPanel

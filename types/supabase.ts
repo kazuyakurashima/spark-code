@@ -44,6 +44,7 @@ export type Database = {
           event_type: LearningEventType;
           metadata: LearningEventMetadata;
         }>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
