@@ -32,42 +32,63 @@ const stepMatchers: Record<string, (code: string) => boolean> = {
     return items.every((m) => m[1].trim().length > 0);
   },
   "3-2": () => true,
-  // Lesson 4: <style> の中で **<h1> セレクタを含むルール** が
-  // `color:` を黒以外の値で設定していること。
-  // - background-color / border-color などの *-color プロパティは除外
-  // - p { color: ... } や body { color: ... } では合格させない
-  //   (レッスンの教える対象は <h1> の色変更のため)
-  "4-1": (code) => {
-    const styleMatch = code.match(/<style[^>]*>([\s\S]*?)<\/style>/);
-    if (!styleMatch) return false;
-    const css = styleMatch[1];
-    const blackValues = new Set([
-      "black",
-      "#000",
-      "#000000",
-      "rgb(0,0,0)",
-      "rgba(0,0,0,1)",
-      "rgb(0%,0%,0%)",
-      "hsl(0,0%,0%)",
-    ]);
-    // Walk every "selector { declarations }" block in the <style>.
-    for (const rule of css.matchAll(/([^{}]+)\{([^}]+)\}/g)) {
-      const selectors = rule[1].toLowerCase().split(",").map((s) => s.trim());
-      const targetsH1 = selectors.some((s) => /\bh1\b/.test(s));
-      if (!targetsH1) continue;
-      const decls = rule[2];
-      // Find `color:` declarations (excluding *-color via the [^-] guard).
-      for (const decl of decls.matchAll(
-        /(?:^|[^-])color\s*:\s*([^;}]+)/gi,
-      )) {
-        const v = decl[1].trim().toLowerCase().replace(/\s+/g, "");
-        if (v.length > 0 && !blackValues.has(v)) return true;
-      }
-    }
-    return false;
-  },
-  "4-2": () => true,
+  /**
+   * Returns true iff the CSS selector targets `<h1>` as a real type
+   * selector (not as a class `.h1`, an id `#h1`, or inside a functional
+   * pseudo like `:not(h1)`).
+   *
+   * Strategy: split the selector by descendant/child/adjacent/sibling
+   * combinators, then for each compound selector look at the LEADING
+   * identifier (before any `.` `#` `:` `[`). That identifier is the
+   * type selector; we accept the rule if any token starts with `h1`
+   * exactly.
+   */
+  // (helper hoisted out of the matcher closure for readability)
 };
+
+function selectorTargetsH1(selector: string): boolean {
+  const tokens = selector
+    .split(/[\s>+~]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  return tokens.some((token) => {
+    const m = token.match(/^([a-zA-Z][a-zA-Z0-9-]*)/);
+    return m !== null && m[1].toLowerCase() === "h1";
+  });
+}
+
+// Lesson 4: <style> の中で「<h1> を直接ターゲットにするルール」が
+// `color:` を黒以外の値で設定していること。
+// - background-color / border-color などの *-color プロパティは除外
+// - .h1 / #h1 / :not(h1) など h1 を別文脈で含むだけのセレクタは不合格
+// - p { color: ... } や body { color: ... } では合格させない
+stepMatchers["4-1"] = (code) => {
+  const styleMatch = code.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  if (!styleMatch) return false;
+  const css = styleMatch[1];
+  const blackValues = new Set([
+    "black",
+    "#000",
+    "#000000",
+    "rgb(0,0,0)",
+    "rgba(0,0,0,1)",
+    "rgb(0%,0%,0%)",
+    "hsl(0,0%,0%)",
+  ]);
+  for (const rule of css.matchAll(/([^{}]+)\{([^}]+)\}/g)) {
+    const selectors = rule[1].split(",");
+    const targetsH1 = selectors.some(selectorTargetsH1);
+    if (!targetsH1) continue;
+    const decls = rule[2];
+    for (const decl of decls.matchAll(/(?:^|[^-])color\s*:\s*([^;}]+)/gi)) {
+      const v = decl[1].trim().toLowerCase().replace(/\s+/g, "");
+      if (v.length > 0 && !blackValues.has(v)) return true;
+    }
+  }
+  return false;
+};
+
+stepMatchers["4-2"] = () => true;
 
 const stepSolutions: Record<string, string | null> = {
   "1-1": "<h1>名前</h1>",
