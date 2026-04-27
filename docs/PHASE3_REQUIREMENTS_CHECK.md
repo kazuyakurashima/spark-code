@@ -499,6 +499,28 @@
 
 ---
 
+## グループ 4(T14-T18)Codex Review 残置事項
+
+3 ラウンド回した結果、**2 件の warning が振動**(各ラウンドで Codex の判断が反転)した。仕様 §9.6 / §10.5 に立ち返り、**意図的判断として保持**する。Phase 3.1 検証で実問題が出た場合は再検討。
+
+### Warning 1: Hint カウントを intent 時点で行う
+
+- **Codex 警告**(round 1 / round 3): API レスポンス成功時にカウントすべき。失敗時もカウントすると `totalHints` が膨らみ `classifyEffort()` が `persevered` 側にずれる可能性
+- **採用判断**: **intent 時点(クリック直後)でカウント**
+- **根拠**: §9.6「ヒント使用回数 / リトライ回数」は **学習者が助けを求めた回数**(struggle signal)を意味する。生成失敗は学習者の体験には現れない事象であり、struggle 信号は変わらない。Anthropic の可用性は十分高く、失敗で増える誤差は小さな定数。逆に成功時のみカウントすると、本物の struggle が under-count されるリスクの方が大きい
+- **justification コメント**: [components/LessonWorkspace.tsx:295-309](components/LessonWorkspace.tsx#L295-L309)(handleHint 内)
+- **再検討トリガー**: Phase 3.1 検証で「3 点セットの effort 分類が学習者の体感とズレている」というフィードバックが出たとき
+
+### Warning 2: Summary ボタンの disabled 状態を撤廃
+
+- **Codex 警告**(round 2 / round 3): `log.sessionId` が空の環境(プライベートモード等)では `disabled` + `aria-describedby` で理由を伝えるべき
+- **採用判断**: **常に有効、エラー時はチャット内 `aria-live="polite"` バブルでフィードバック**
+- **根拠**: a11y 観点で `disabled` 状態の `<button>` は多くの screen reader でフォーカスを受けないため `aria-describedby` の説明文が読み上げられない。エラーバブルなら **sighted / keyboard / touch / AT 全ユーザーに同じ体験**(既存の chat aria-live チャンネル経由)。storage-blocked はレアケースで、たまの 1 往復よりも全員に届くフィードバックを優先
+- **justification コメント**: [components/LessonWorkspace.tsx:459-475](components/LessonWorkspace.tsx#L459-L475)(handleSummary 内)+ [components/ChatPanel.tsx:212-215](components/ChatPanel.tsx#L212-L215)(button 直前)
+- **再検討トリガー**: Phase 3.1 検証で「ボタンを押しても何も起きないように見える」「エラーメッセージが見つからない」というフィードバックが出たとき
+
+---
+
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
 
 ### 完了条件チェック(§18.1)

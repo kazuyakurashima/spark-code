@@ -209,6 +209,10 @@ function QuickActions(props: {
       >
         {props.isExplaining ? "考え中…" : "📖 やさしく説明して"}
       </button>
+      {/* Summary button intentionally has no `disableSummary` flag.
+          Storage-blocked / private-mode is handled by the parent
+          handler emitting an aria-live chat bubble — see
+          `handleSummary` in LessonWorkspace.tsx for the rationale. */}
       <button
         type="button"
         onClick={props.onSummary}

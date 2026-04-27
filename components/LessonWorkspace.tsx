@@ -459,11 +459,17 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const handleSummary = useCallback(async () => {
     if (busy) return;
     if (!log.sessionId) {
-      // Storage blocked / private mode / SSR — surface the reason
-      // instead of silently no-op'ing, otherwise the button looks
-      // broken. The ChatPanel also disables this button when
-      // sessionId is empty (see disableSummary prop), but this is
-      // the safety net.
+      // **Product decision (deliberate, not oscillating with reviewer
+      // feedback): keep the summary button always enabled and surface
+      // the storage-blocked reason as a chat bubble here.**
+      // Disabling the button would be silent for screen-reader users
+      // (disabled controls aren't focusable in many ATs, so the
+      // associated `aria-describedby` help text is unreliable). The
+      // chat scroller is `aria-live="polite"`, so this error message
+      // reaches sighted, keyboard, touch, and AT users through one
+      // channel. Storage-blocked is rare enough (private mode etc.)
+      // that the rare extra round-trip is preferable to a button that
+      // some users can't tell is unavailable.
       appendMessage({
         id: newId(),
         role: "assistant",
