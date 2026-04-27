@@ -325,6 +325,99 @@
 - コミット:
   - (T9 単独コミットの sha は commit と同タイミングで記録)
 
+## T10: `type=explain`「やさしく説明して」エンドポイント
+
+- 対応要件: §9.2 先生 / §9.3「やさしく説明して」/ §9.7.1
+- 実装内容:
+  - `types/chat.ts` に `ChatRequestExplain { type:"explain", stepId, code }` 追加。`ChatResponseTextual` / `ChatMessage["kind"]` に `"explain"` を追加
+  - `lib/prompts.ts` に `buildExplainPrompt(stepId, code)` 追加。質問文を持たない代わりに「現在のレッスンの **主要概念**(`stepContext` 経由で `concept` を流す)を 3-5 行でやさしく説明する」ことに固定。例 1 つ + 技術名注釈 + コードに紐づけ
+  - `app/api/chat/route.ts` に `case "explain"` 分岐(`temperature: 0.5, maxTokens: 320`)。空応答時のフォールバックメッセージ付き
+  - `LessonWorkspace.isChatResponse` の runtime guard を `"explain"` 受け入れに更新
+- 主な変更ファイル:
+  - `types/chat.ts` / `lib/prompts.ts` / `app/api/chat/route.ts` / `components/LessonWorkspace.tsx`
+- 要件定義書との差分:
+  - **なし**(§9.7.1 の 4 ルール「3-5 行 / 技術名注釈 / 例 1 つ / 今のコードに紐づけ」をすべてプロンプトに反映)
+- 連動 / 未対応 TODO:
+  - T14 で UI ボタンと結線(LessonWorkspace に handleExplain ハンドラを追加し、ChatPanel から呼ばれる)
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 3 シナリオで実機確認([docs/snapshots/sparkcoach_outputs.md](snapshots/sparkcoach_outputs.md) 参照)
+  - Lesson 1 / 4 / 5 で内容が異なる主要概念を、技術名注釈つき 3-5 行で説明できている
+- コミット:
+  - `3d6d1ae feat(phase3): T10-T13 ...`(T11/T12/T13 と一緒の bundled commit)
+
+## T11: `type=improve`「もっと良くしたい」エンドポイント
+
+- 対応要件: §9.2 ナビゲーター(改善版)/ §9.3「もっと良くしたい」/ §9.7.5
+- 実装内容:
+  - `ChatRequestImprove { type:"improve", stepId, code }` を types に追加
+  - `lib/prompts.ts` の `buildImprovePrompt(stepId, code)` で **`getLesson(currentLesson.id + 1)`** から次レッスンタイトル + concept を引き当て、user prompt に埋め込む。次レッスンが無い(Lesson 6 / Lesson 16)場合は generic な周回予告に倒すフォールバック
+  - prompt のルール: 「いまのコードでよくできている点 1 行 + **次レッスンで実現できる予告 1 つ** / **具体的なコードは絶対に示さない**(予告のみ)/ 全体 2-3 行」
+  - route に `case "improve"` 分岐(`temperature: 0.7, maxTokens: 220`)
+  - LessonWorkspace.isChatResponse 拡張
+- 主な変更ファイル: T10 と同じ 4 ファイル
+- 要件定義書との差分:
+  - **なし**(§9.7.5 の 3 ルール準拠)
+- 連動 / 未対応 TODO:
+  - T14 で UI ボタンと結線
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 4 シナリオで実機確認:Lesson 1-2 → Lesson 3 予告 / Lesson 4-1 → Lesson 5 (JS 予告)/ Lesson 5-1 → Lesson 6 (全体像予告)/ Lesson 6-1 (recap、次レッスン未実装)→ generic 周回予告
+  - 具体的なコードは出力していない(予告のみ)
+- コミット: `3d6d1ae`
+
+## T12: `type=summary`「できたことを教えて」エンドポイント(learning_events 集計 / sparseness 対応付き)
+
+- 対応要件: §9.2 応援者 / §9.3「できたことを教えて」/ §9.7.3
+- 実装内容:
+  - `ChatRequestSummary { type:"summary", stepId, sessionId }` を types に追加(他の type と違い `code` は不要)
+  - route の `case "summary"` で **`getSupabaseServer()`** 経由(service_role)で当該 sessionId の `learning_events` を直近 20 件 select
+  - **sparseness ガード**: `lesson_completed === 0 && step_completed < 3` の場合は `SUMMARY_TOO_EARLY_MESSAGE` を Claude を呼ばずに返す。「まだ振り返るには早いね!Lesson 1 を 1 つでもクリアすると、できたことを 3 つ振り返れるようになります。…」
+  - has-data の場合は `formatEventsForSummary` で行を整形(`| timestamp | event_type | lesson/step | metadata excerpt |`)→ `buildSummaryPrompt` で 「3 つの過去形箇条書き + 励まし 1 行」を Claude に依頼(`temperature: 0.6, maxTokens: 360`)
+  - validation: `MAX_SESSION_ID_LENGTH = 64` を route の size limits に追加
+  - LessonWorkspace.isChatResponse 拡張
+- 主な変更ファイル: T10 と同じ 4 ファイル
+- 要件定義書との差分:
+  - **なし**(§9.7.3 の 「3 箇条書き / 過去形 / 最後に 1 行励まし」を準拠 + ユーザ要望の「ログが少ない初期段階用 fallback」を SUMMARY_TOO_EARLY_MESSAGE で実装)
+- 連動 / 未対応 TODO:
+  - T14 で sessionId を `useEventLogger` から取って渡す結線
+  - sparseness 閾値(`< 3` step_completed)は MVP 直感値。検証フィードバックで調整可
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - **too-early**: 新規 sessionId(0 件)→ `SUMMARY_TOO_EARLY_MESSAGE` を Claude 呼ばずに返した(ログ確認済)
+  - **has-data**: 14 件 seed(Lesson 1-1 トライ&エラー + ヒント / 1-2 一発合格 + 質問 / Lesson 2-1 一発合格 / lesson_completed for Lesson 1) → 3 つの「過去形箇条書き + 1 行励まし」が返却。期待通り「最初は失敗しましたが、ヒントをもらって…」「自己紹介文を作ることができるようになりました」のように、苦労 → 解決パターンを正しく抽出
+  - test data はキャプチャ後に Supabase REST API(service_role)で 14 行 delete 済(クリーン)
+- コミット: `3d6d1ae`
+
+## T13: `type=diagnose`「どこが違う?」エンドポイント(進行を起こさない)
+
+- 対応要件: §9.2 コード診断 / §9.3「どこが違う?」/ §9.7.2 不正解分岐
+- 実装内容:
+  - `ChatRequestDiagnose { type:"diagnose", stepId, code }` を types に追加。response 型は `correct` フィールドを持たない(進行と無関係であることを型で表明)
+  - route の `case "diagnose"` で先に `matchStep` を実行。**合格パターンに当たっている場合は `DIAGNOSE_ALREADY_PASSING_MESSAGE`(「今のコードは合格パターンに当たっています!**「答え合わせする」** を押すと次のステップに進めますよ。」)を Claude を呼ばずに返す**(進行は judge ボタン専用で、diagnose は確認用に留める原則)
+  - 不合格の場合のみ `buildDiagnosePrompt` で「差分 1 か所のみ + 修正例 1 行」を Claude に依頼(`temperature: 0.4, maxTokens: 240`)
+  - prompt のルール: 「できている部分は必ず認める / 差分 1 か所のみ / 修正例 1 行 / 「間違っている」NG / **進行はあなたが起こさない** を明示」
+  - LessonWorkspace.isChatResponse 拡張
+- 主な変更ファイル: T10 と同じ 4 ファイル
+- 要件定義書との差分:
+  - **なし**(§9.7.2 不正解分岐 + 「進行を起こさない」を実装で担保)
+- 連動 / 未対応 TODO:
+  - T14 で UI ボタンと結線。判定 CTA「答え合わせする」とは別のサブボタンとして区別する
+- 自己評価:
+  - **OK**
+- 自己評価のメモ:
+  - 5 シナリオで実機確認:
+    - 空コード → やさしいスタートメッセージ
+    - 未閉じタグ → 「`</h1>` を付け足すと完成」+ 修正例 1 行
+    - p セレクタ(h1 でない)→ 「`p` を `h1` に変える」+ 修正例
+    - innerHTML 誤用 → 「`textContent` に変える」+ 修正例
+    - **already-passing 合格コード** → `DIAGNOSE_ALREADY_PASSING_MESSAGE`(Claude を呼ばずに canned で返却)を確認
+  - 進行(stepIndex 更新)は一切起きない仕様(route が `correct` を返さないので client は advance しない)
+- コミット: `3d6d1ae`
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
