@@ -295,10 +295,9 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const handleHint = useCallback(async () => {
     if (busy) return;
     if (isLastStep) return;
-    // Track per-step hint count so the 3-point set classifier can pick
-    // the right template at lesson_completed.
-    hintRequestsRef.current[currentStep.id] =
-      (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
+    // Log the *intent* now (the learner asked for a hint), but defer the
+    // effort-classifier counter to the success branch below — a failed
+    // request shouldn't downgrade the 3-point set tier.
     log.hintRequested(currentStep.id);
     setBusy("hint");
     try {
@@ -308,6 +307,9 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         code,
       });
       if (resp.type === "hint") {
+        // The learner actually received a hint — count it toward effort.
+        hintRequestsRef.current[currentStep.id] =
+          (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
         appendMessage({
           id: newId(),
           role: "assistant",
@@ -449,7 +451,21 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
 
   const handleSummary = useCallback(async () => {
     if (busy) return;
-    if (!log.sessionId) return; // SSR or storage-blocked: silent skip
+    if (!log.sessionId) {
+      // Storage blocked / private mode / SSR — surface the reason
+      // instead of silently no-op'ing, otherwise the button looks
+      // broken. The ChatPanel also disables this button when
+      // sessionId is empty (see disableSummary prop), but this is
+      // the safety net.
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content:
+          "ブラウザの設定でセッション情報を保存できないため、振り返りは使えません。プライベートウィンドウや、ストレージを無効化している場合は設定を見直してから、もう一度お試しください。",
+      });
+      return;
+    }
     setBusy("summary");
     try {
       const resp = await callChat({
@@ -599,6 +615,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
             isBusy={busy !== null}
             disableHint={isLastStep}
             disableDiagnose={isLastStep}
+            disableSummary={!log.sessionId}
           />
         }
       />

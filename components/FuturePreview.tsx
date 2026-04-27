@@ -56,7 +56,10 @@ const FUTURE_HTML = `<style>
 </div>`;
 
 function buildSrcDoc(body: string): string {
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"></head><body>${body}</body></html>`;
+  // viewport meta is required so the iframe contents render at the
+  // correct CSS pixel scale on mobile. Without it, narrow screens
+  // would zoom the preview down to unreadable desktop scale.
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${body}</body></html>`;
 }
 
 export function FuturePreview() {
@@ -69,7 +72,7 @@ export function FuturePreview() {
         今のカード → 未来のカード
       </p>
 
-      <div className="grid grid-cols-2 gap-3 items-stretch">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
         {/* 現在のカード(1 周目で到達するシンプル版) */}
         <figure className="space-y-1.5">
           <figcaption className="text-[0.7rem] text-slate-400 text-center">

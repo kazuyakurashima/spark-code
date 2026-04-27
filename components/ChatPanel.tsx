@@ -36,6 +36,9 @@ type Props = {
    *  を非アクティブ化するためのフラグ。 */
   disableHint?: boolean;
   disableDiagnose?: boolean;
+  /** localStorage のセッション ID が取れない環境(プライベートモード等)
+   *  で「できたことを教えて」をグレーアウトするためのフラグ。 */
+  disableSummary?: boolean;
 };
 
 const messageMarkdownComponents = {
@@ -173,6 +176,7 @@ function QuickActions(props: {
   isBusy: boolean;
   disableHint: boolean;
   disableDiagnose: boolean;
+  disableSummary: boolean;
 }) {
   const baseBtn =
     "rounded-lg px-2 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed border";
@@ -212,8 +216,13 @@ function QuickActions(props: {
       <button
         type="button"
         onClick={props.onSummary}
-        disabled={props.isBusy}
+        disabled={props.isBusy || props.disableSummary}
         className={`${baseBtn} bg-pink-500/15 border-pink-500/40 text-pink-200 hover:bg-pink-500/25`}
+        title={
+          props.disableSummary
+            ? "ブラウザの設定でセッション情報が保存できないため、この機能は使えません"
+            : ""
+        }
       >
         {props.isSummarizing ? "考え中…" : "✨ できたことを教えて"}
       </button>
@@ -246,6 +255,7 @@ export function ChatPanel({
   isBusy,
   disableHint = false,
   disableDiagnose = false,
+  disableSummary = false,
 }: Props) {
   const [draft, setDraft] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -295,6 +305,7 @@ export function ChatPanel({
         isBusy={isBusy}
         disableHint={disableHint}
         disableDiagnose={disableDiagnose}
+        disableSummary={disableSummary}
       />
 
       <div
