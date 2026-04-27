@@ -435,9 +435,10 @@
   - `components/LessonWorkspace.tsx`(4 ハンドラ + 18 個の Props 受け渡し)
   - `components/ChatPanel.tsx`(QuickActions + 5 ボタン + bubble kind 拡張)
 - 要件定義書との差分:
-  - **なし**
+  - **なし**(2 件の意図的判断は要件適合の範囲内 — 下記「グループ 4 判断済み事項」参照)
 - 自己評価:
   - **OK**(dev で `/lesson/1` 200 + 5 つの quick-action テキストが HTML に出現、4 endpoint smoke 200)
+- 補記: Codex warning 2 件を意図的判断として保持(詳細はコード justification コメント参照)
 
 ## T15: 3 点セットのテンプレデータ作成
 
@@ -499,24 +500,24 @@
 
 ---
 
-## グループ 4(T14-T18)Codex Review 残置事項
+## グループ 4(T14-T18)判断済み事項
 
-3 ラウンド回した結果、**2 件の warning が振動**(各ラウンドで Codex の判断が反転)した。仕様 §9.6 / §10.5 に立ち返り、**意図的判断として保持**する。Phase 3.1 検証で実問題が出た場合は再検討。
+Codex Review を 3 ラウンド回した結果、2 件の warning は **仕様解釈と UX 方針に基づく意図的判断** として確定した(各ラウンドで Codex の判断自体が振動したため、4 ラウンド目を回しても収束する見込みが薄いと判断)。**要件適合の範囲内** であり、未解決の不具合ではない。Phase 3.1 検証で実問題が出た場合のみ再検討する。
 
-### Warning 1: Hint カウントを intent 時点で行う
+### 判断 1: Hint カウントを intent 時点で行う
 
-- **Codex 警告**(round 1 / round 3): API レスポンス成功時にカウントすべき。失敗時もカウントすると `totalHints` が膨らみ `classifyEffort()` が `persevered` 側にずれる可能性
-- **採用判断**: **intent 時点(クリック直後)でカウント**
-- **根拠**: §9.6「ヒント使用回数 / リトライ回数」は **学習者が助けを求めた回数**(struggle signal)を意味する。生成失敗は学習者の体験には現れない事象であり、struggle 信号は変わらない。Anthropic の可用性は十分高く、失敗で増える誤差は小さな定数。逆に成功時のみカウントすると、本物の struggle が under-count されるリスクの方が大きい
-- **justification コメント**: [components/LessonWorkspace.tsx:295-309](components/LessonWorkspace.tsx#L295-L309)(handleHint 内)
+- **採用判断**: クリック直後(intent 時点)でカウント。API レスポンス成否に依存させない
+- **代替案(Codex 提案)**: response 成功時のみカウント
+- **根拠**: §9.6「ヒント使用回数 / リトライ回数」は **学習者が助けを求めた回数(struggle signal)** を意味する仕様解釈。生成失敗は学習者の体験には現れない事象であり、struggle 信号としては成立済み。Anthropic 可用性が十分高い前提で、失敗カウントによる誤差は小さな定数。逆に成功時のみカウントすると、本物の struggle が under-count されるリスクの方が大きい
+- **justification コメント**: [components/LessonWorkspace.tsx:295-309](components/LessonWorkspace.tsx#L295-L309)(`handleHint` 内 — hint ボタン本体は [ChatPanel.tsx](components/ChatPanel.tsx) の `QuickActions` 内、カウンタ実体は親ハンドラに集約)
 - **再検討トリガー**: Phase 3.1 検証で「3 点セットの effort 分類が学習者の体感とズレている」というフィードバックが出たとき
 
-### Warning 2: Summary ボタンの disabled 状態を撤廃
+### 判断 2: Summary ボタンの disabled 状態を撤廃 + aria-live エラーバブル
 
-- **Codex 警告**(round 2 / round 3): `log.sessionId` が空の環境(プライベートモード等)では `disabled` + `aria-describedby` で理由を伝えるべき
-- **採用判断**: **常に有効、エラー時はチャット内 `aria-live="polite"` バブルでフィードバック**
+- **採用判断**: ボタンは常に有効。`log.sessionId` が空の環境(プライベートモード等)では押下時にチャット内 `aria-live="polite"` バブルで理由をフィードバック
+- **代替案(Codex 提案)**: `disabled` + `aria-describedby` の補助テキスト
 - **根拠**: a11y 観点で `disabled` 状態の `<button>` は多くの screen reader でフォーカスを受けないため `aria-describedby` の説明文が読み上げられない。エラーバブルなら **sighted / keyboard / touch / AT 全ユーザーに同じ体験**(既存の chat aria-live チャンネル経由)。storage-blocked はレアケースで、たまの 1 往復よりも全員に届くフィードバックを優先
-- **justification コメント**: [components/LessonWorkspace.tsx:459-475](components/LessonWorkspace.tsx#L459-L475)(handleSummary 内)+ [components/ChatPanel.tsx:212-215](components/ChatPanel.tsx#L212-L215)(button 直前)
+- **justification コメント**: [components/ChatPanel.tsx:212-215](components/ChatPanel.tsx#L212-L215)(button 直前のコメント)+ [components/LessonWorkspace.tsx:459-475](components/LessonWorkspace.tsx#L459-L475)(`handleSummary` 内のエラーバブル emit)
 - **再検討トリガー**: Phase 3.1 検証で「ボタンを押しても何も起きないように見える」「エラーメッセージが見つからない」というフィードバックが出たとき
 
 ---
