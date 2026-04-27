@@ -295,12 +295,17 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const handleHint = useCallback(async () => {
     if (busy) return;
     if (isLastStep) return;
-    // Count the *intent* (clicking the hint button) toward effort.
-    // §9.6 talks about "ヒント使用回数 / リトライ回数" — i.e. how
-    // many times the learner asked for help — so a request that
-    // happens to error out is still a signal of struggle. We rely
-    // on the existing `if (busy) return` guard and the disabled-
-    // while-thinking button state to prevent runaway double-clicks.
+    // **Product decision (deliberate, not oscillating with reviewer
+    // feedback): count the hint request at click time.**
+    // §9.6 specifies "ヒント使用回数 / リトライ回数" as the input to
+    // effort classification. The user's struggle signal is "the
+    // learner asked for help" — whether the bytes round-tripped
+    // successfully is incidental. A flaky upstream might inflate
+    // the count by a small constant, but in production Anthropic
+    // is highly available so this is a tiny risk vs the larger risk
+    // of under-counting actual struggle.
+    // Concurrent double-clicks are prevented by `if (busy) return`
+    // above + the button's disabled-while-thinking state.
     hintRequestsRef.current[currentStep.id] =
       (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
     log.hintRequested(currentStep.id);
@@ -617,7 +622,6 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
             isBusy={busy !== null}
             disableHint={isLastStep}
             disableDiagnose={isLastStep}
-            disableSummary={!log.sessionId}
           />
         }
       />

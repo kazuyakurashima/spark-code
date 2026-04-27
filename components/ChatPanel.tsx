@@ -36,9 +36,6 @@ type Props = {
    *  を非アクティブ化するためのフラグ。 */
   disableHint?: boolean;
   disableDiagnose?: boolean;
-  /** localStorage のセッション ID が取れない環境(プライベートモード等)
-   *  で「できたことを教えて」をグレーアウトするためのフラグ。 */
-  disableSummary?: boolean;
 };
 
 const messageMarkdownComponents = {
@@ -176,7 +173,6 @@ function QuickActions(props: {
   isBusy: boolean;
   disableHint: boolean;
   disableDiagnose: boolean;
-  disableSummary: boolean;
 }) {
   const baseBtn =
     "rounded-lg px-2 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed border";
@@ -216,10 +212,7 @@ function QuickActions(props: {
       <button
         type="button"
         onClick={props.onSummary}
-        disabled={props.isBusy || props.disableSummary}
-        aria-describedby={
-          props.disableSummary ? "summary-disabled-help" : undefined
-        }
+        disabled={props.isBusy}
         className={`${baseBtn} bg-pink-500/15 border-pink-500/40 text-pink-200 hover:bg-pink-500/25`}
       >
         {props.isSummarizing ? "考え中…" : "✨ できたことを教えて"}
@@ -232,16 +225,6 @@ function QuickActions(props: {
       >
         {props.isImproving ? "考え中…" : "🎯 もっと良くしたい"}
       </button>
-      {props.disableSummary && (
-        <p
-          id="summary-disabled-help"
-          className="col-span-2 text-[0.65rem] text-pink-300/80 leading-relaxed"
-        >
-          ※「✨ できたことを教えて」は、ブラウザの設定でセッション情報を
-          保存できないため使えません。プライベートウィンドウやストレージ
-          無効化を解除すると使えるようになります。
-        </p>
-      )}
     </div>
   );
 }
@@ -263,7 +246,6 @@ export function ChatPanel({
   isBusy,
   disableHint = false,
   disableDiagnose = false,
-  disableSummary = false,
 }: Props) {
   const [draft, setDraft] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -313,7 +295,6 @@ export function ChatPanel({
         isBusy={isBusy}
         disableHint={disableHint}
         disableDiagnose={disableDiagnose}
-        disableSummary={disableSummary}
       />
 
       <div
