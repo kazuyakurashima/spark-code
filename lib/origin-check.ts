@@ -14,17 +14,13 @@ import type { NextRequest } from "next/server";
  * payload caps, and the anon Supabase client (in /api/log) are the
  * concrete defenses; this check is the cheapest extra layer on top.
  *
- * Browsers always attach `Origin` on cross-origin POSTs and on most
- * same-origin POSTs. A request with no `Origin` header (curl, scripts)
- * or with a host that doesn't match our own is rejected as 403.
+ * Compares the full `Origin` header (scheme + host + port) against the
+ * server's own origin via `request.nextUrl.origin`. A host-only check
+ * would accept `http://app` against an `https://app` server, which
+ * weakens the gate — we want scheme parity too.
  */
 export function isAllowedOrigin(request: NextRequest): boolean {
-  const host = request.headers.get("host");
   const origin = request.headers.get("origin");
-  if (!host || !origin) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
+  if (!origin) return false;
+  return origin === request.nextUrl.origin;
 }

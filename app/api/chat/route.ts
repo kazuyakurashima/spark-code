@@ -17,6 +17,7 @@ import {
   buildSummaryPrompt,
 } from "@/lib/prompts";
 import type { ChatRequest, ChatResponse } from "@/types/chat";
+import type { LearningEventType } from "@/types/supabase";
 
 // Anthropic SDK uses Node APIs, so keep this on the Node runtime.
 export const runtime = "nodejs";
@@ -292,13 +293,27 @@ export async function POST(request: NextRequest) {
             message: SUMMARY_TOO_EARLY_MESSAGE,
           } satisfies ChatResponse);
         }
-        // Past the gate: fetch the most recent 20 rows for the prompt.
+        // Past the gate: fetch the most recent 40 events of the types
+        // that actually feed the retrospective. Excluding `code_changed`
+        // (high-volume but low-signal) and `step_started` keeps the
+        // prompt window aligned with the gate — the data Claude sees
+        // includes the same completion / hint / question events the
+        // gate counted, even on long sessions.
+        const SUMMARY_EVENT_TYPES: LearningEventType[] = [
+          "lesson_started",
+          "lesson_completed",
+          "step_completed",
+          "judge_executed",
+          "hint_requested",
+          "question_asked",
+        ];
         const { data, error } = await supabase
           .from("learning_events")
           .select("event_type, lesson_id, step_id, metadata, created_at")
           .eq("session_id", body.sessionId)
+          .in("event_type", SUMMARY_EVENT_TYPES)
           .order("created_at", { ascending: false })
-          .limit(20);
+          .limit(40);
         if (error) {
           console.warn("[chat] summary supabase failed:", error);
           return Response.json({
