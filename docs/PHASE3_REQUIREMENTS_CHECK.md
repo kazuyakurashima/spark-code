@@ -498,6 +498,26 @@
   - **軽微あり**:§6 Lesson 6「未来のカードを 1 秒だけ見せる」を、繰り返しの subtle pulse(`motion-safe:animate-[3s]`)に翻訳。文字通り 1 秒だけ表示すると「見落とすリスク」+「過剰アニメ違和感」があるため、reduced-motion 対応を担保しつつ「もうすぐ手が届く」感を継続的に出す形に調整
 - 自己評価: **OK**(`/lesson/6` 200、iframe 2 つ、`今のカード` / `未来のカード` 文言確認)
 
+## T19: ドキュメント整備(PROJECT_OVERVIEW / CURRICULUM / SPARK_COACH)
+
+- 対応要件: §0.4(関連ドキュメント)/ §19.3(関連ドキュメントの分割)
+- 実装内容:
+  - **新規 [docs/CURRICULUM.md](CURRICULUM.md)**: §5-§8 抜粋(全 16 レッスン詳細)+ Phase 3.1 実装状況サマリ + レッスンごとの実装ファイルポインタ。冒頭に「正本は要件定義書側」と明示
+  - **新規 [docs/SPARK_COACH.md](SPARK_COACH.md)**: §9 抜粋(Sparkコーチ仕様)+ Phase 3.1 実装マップ(仕様セクション → 実装ファイル / シンボル)+ §9.7 プロンプト方針 + §9.8 promotive 誘導の Phase 3.1 実装状況。グループ 4 判断済み事項への参照リンクも追加
+  - **更新 [docs/PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)**:
+    - Status 行を「Phase 3.1 完了」へ。最終更新日を 2026-04-27 に
+    - 冒頭に **関連ドキュメント表** を追加(本書 / 要件定義書 / CURRICULUM / SPARK_COACH / TODO / CHECK / DEPLOY)
+    - 新 §2「Phase 進捗(本書の現在地)」を追加(Phase 1 → 3.4 のロードマップ + Phase 3.1 で達成したことの 7 項目箇条書き)
+    - 旧 §2(MVP のスコープ)を §3 に降格して「歴史的記録」とラベル
+    - §5(AI の役割)を 4 機能 → **8 機能** に更新(judge / hint / praise / question / explain / improve / summary / diagnose、進行を起こす / 起こさないも明示)
+    - §6(技術スタック)に Supabase / CSRF / lang-javascript / sandbox=allow-scripts(Lesson 5) を追加
+    - §7(ファイル構成)を Phase 3.1 完了時点の **実在ファイル構成** に置換(components/lib/types/scripts/api 全部反映)
+    - §3 以降を順番に renumber(§14→§15、§13→§14、…、§3→§4)+ 内部参照(`§14 参照` / `§2 の 3 条件`)も追従
+- 主な変更ファイル: `docs/PROJECT_OVERVIEW.md` / `docs/CURRICULUM.md`(新規)/ `docs/SPARK_COACH.md`(新規)
+- 要件定義書との差分:
+  - **なし**(§19.3 が指定する 3 ファイル + §0.4 の責任分担を満たす)
+- 自己評価: **OK**(3 ファイルとも `## 関連ドキュメント` 末尾セクションを揃えて相互ナビゲート可、CURRICULUM / SPARK_COACH 双方に Phase 3.1 実装状況テーブルを配置)
+
 ---
 
 ## グループ 4(T14-T18)判断済み事項
