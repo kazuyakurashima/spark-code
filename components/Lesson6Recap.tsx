@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { Lesson } from "@/lib/lessons";
+import { FuturePreview } from "./FuturePreview";
+import { UpsellBlock } from "./UpsellBlock";
 
 /**
  * 1 周目で扱った 5 要素の振り返り。Lesson 1〜5 と 1:1 で対応する。
@@ -35,10 +37,9 @@ const ROLES_OVERVIEW: ReadonlyArray<{
 
 /**
  * Sparkコーチからの総合振り返り(§6 Lesson 6 例文準拠)。
- * Phase 3.1 では固定文。T15 で苦労度合いに応じて差し替えるテンプレ機構へ拡張する。
- *
- * TODO Phase 3.1 (T15): 学習者の learning_events から effort を分類し、
- *   苦労度合い別に 2-3 種類の文面を切り替える。
+ * Phase 3.1 では固定文。将来 learning_events から effort を分類して
+ * 切り替える形に拡張可能(T15 の classifyEffort + テンプレートを recap
+ * 用に流用するイメージ)。
  */
 const SPARK_COACH_RECAP = `ここまでで、あなたは Web 制作の全体像を一周できました。
 HTML で中身を作り、CSS で見た目を変え、JavaScript で画面を変化させました。
@@ -48,20 +49,6 @@ HTML で中身を作り、CSS で見た目を変え、JavaScript で画面を変
 角丸、影、テーマ色、入力で変わる仕組みまで。
 一緒に進みましょう。`;
 
-/**
- * 「未来のカード」予告。§11.6 では「現在のカード vs 完成形」のビジュアル
- * 比較を求めているが、その本格 UI は T18 で実装する。Phase 3.1 のこの段階
- * では「これから何ができるか」を箇条書きで予告するプレースホルダにする。
- *
- * TODO Phase 3.1 (T18): 静的スナップショットとの比較ビジュアル UI に置換する。
- */
-const FUTURE_PREVIEW_BULLETS: ReadonlyArray<string> = [
-  "角丸と影でカードらしく整える",
-  "テーマ色を選んで雰囲気を変える",
-  "hover で触ると動くようにする",
-  "入力した名前と自己紹介でカードを書き換える",
-];
-
 type Props = {
   lesson: Lesson;
 };
@@ -69,15 +56,6 @@ type Props = {
 export function Lesson6Recap({ lesson }: Props) {
   // 「後で考える」を押すと課金 CTA を畳む。学習者の心理的圧迫感を減らす狙い。
   const [showUpsell, setShowUpsell] = useState(true);
-
-  const handleUpgradeClick = () => {
-    // TODO Phase 3.1 (T17): UpsellBlock コンポーネントに置換し、
-    // 主ボタンの onClick で適切な「準備中」メッセージを出す。
-    // TODO Phase 3.2: Stripe Checkout 連携。
-    alert(
-      "SparkPlus は Phase 3.2 で公開予定です。検証フィードバックをお待ちしています。",
-    );
-  };
 
   return (
     <div className="h-full overflow-y-auto bg-slate-950">
@@ -146,60 +124,11 @@ export function Lesson6Recap({ lesson }: Props) {
           </p>
         </section>
 
-        {/* Future preview placeholder */}
-        <section className="rounded-2xl border border-dashed border-slate-700 p-6 space-y-3">
-          <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">
-            これから作る未来のカード
-          </p>
-          <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-            {FUTURE_PREVIEW_BULLETS.map((b) => (
-              <li
-                key={b}
-                className="flex gap-2 items-start text-slate-200"
-              >
-                <span className="text-pink-300 flex-none" aria-hidden>
-                  ✨
-                </span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-slate-500 italic">
-            ※ ビジュアル比較プレビューは T18 で本実装予定
-          </p>
-        </section>
+        {/* §11.6 / T18: 現在のカード vs 未来のカード比較 */}
+        <FuturePreview />
 
-        {/* Upsell CTA placeholder */}
-        {showUpsell && (
-          <section className="rounded-2xl border border-pink-500/40 bg-gradient-to-r from-purple-500/15 to-pink-500/15 p-6 space-y-4">
-            <h2 className="text-lg font-bold">SparkPlus でカードを育てる</h2>
-            <p className="text-sm text-slate-200 leading-relaxed">
-              Sparkコーチが、あなたのコードを見ながら、つまずいたところを
-              一緒に直します。わからないところは、いつでも聞けます。
-              最後にはあなたのカードを世界に公開できます。
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={handleUpgradeClick}
-                className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
-              >
-                SparkPlus でカードを育てる(早期応援 月 498 円)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowUpsell(false)}
-                className="rounded-xl border border-slate-700 bg-slate-900/50 px-4 py-3 text-sm text-slate-300 transition hover:bg-slate-800/60"
-              >
-                後で考える
-              </button>
-            </div>
-            <p className="text-xs text-slate-500 italic">
-              ※ Stripe 接続(課金実装)と未来カードの本格 UI は T17 / T18 で
-              実装予定。現状は確認用 placeholder。
-            </p>
-          </section>
-        )}
+        {/* §11.4 / §11.5 / T17: SparkPlus 課金導線(Stripe なし、placeholder) */}
+        {showUpsell && <UpsellBlock onDismiss={() => setShowUpsell(false)} />}
       </div>
     </div>
   );

@@ -418,6 +418,85 @@
   - 進行(stepIndex 更新)は一切起きない仕様(route が `correct` を返さないので client は advance しない)
 - コミット: `3d6d1ae`
 
+## T14: ChatPanel に常設ボタン 5 つを統合
+
+- 対応要件: §9.3 / §9.4 / §10.5(レッスン切替時履歴クリア)
+- 実装内容:
+  - `BusyKind` 型を `judge` / `hint` / `question` / `explain` / `improve` / `summary` / `diagnose` / `null` の 8 状態に拡張
+  - `LessonWorkspace` に **4 つの新規ハンドラ**(`handleDiagnose` / `handleExplain` / `handleImprove` / `handleSummary`)を追加。すべて handleHint と同パターン(busy ガード → POST → メッセージ append → finally で busy 解除)。`handleSummary` のみ `log.sessionId` を body に渡す
+  - `ChatPanel` を **全面書き直し**:
+    - 新規 `QuickActions` サブコンポーネントで 2x3 グリッド + 5 個目 full-width(暗黙判断 2 通り):row1 ヒント/どこが違う?、row2 やさしく説明/できたこと、row3 もっと良くしたい(全幅)
+    - 各ボタンに固有の color tone(sky/amber/violet/pink/emerald)+ 個別 busy ラベル「考え中…」
+    - `bubbleClass` / `bubbleLabel` を 5 つの新 kind(diagnose=amber-soft / explain=violet / improve=emerald / summary=gradient / three-points=null label)に拡張
+    - 「先生が考え中…」インジケータの発火条件を 6 種(hint/ask/diagnose/explain/summarize/improve)で OR 結合
+  - `disableHint` に加えて `disableDiagnose` を新設(最終ステップでは両方無効化)。判定 CTA「答え合わせする」(LessonPanel 側)とは別経路を維持し、**diagnose は進行を起こさない**(T13 の契約)を UI 上でも区別
+  - レッスン切替時の履歴クリアは Phase 1 で導入済の `key={lesson.id}` による remount で担保(全 useState がリセット)
+- 主な変更ファイル:
+  - `components/LessonWorkspace.tsx`(4 ハンドラ + 18 個の Props 受け渡し)
+  - `components/ChatPanel.tsx`(QuickActions + 5 ボタン + bubble kind 拡張)
+- 要件定義書との差分:
+  - **なし**
+- 自己評価:
+  - **OK**(dev で `/lesson/1` 200 + 5 つの quick-action テキストが HTML に出現、4 endpoint smoke 200)
+
+## T15: 3 点セットのテンプレデータ作成
+
+- 対応要件: §3.4 / §9.6
+- 実装内容:
+  - 新規 [lib/three-point-templates.ts](../lib/three-point-templates.ts) に `EffortLevel` / `ThreePoints` 型 + `THREE_POINTS` テーブル(Lesson 1〜6 × 3 種 = **18 件**)+ `classifyEffort(maxTries, totalHints)` + `getThreePoints(lessonId, effort)`
+  - 暗黙判断 1 の閾値を採用:perfect = `tries≤1 && hints=0` / struggled = `tries≤3 && hints≤1` / persevered = それ以外
+  - 各レッスンの主要概念に紐づく過去形 3 文(できたこと / カードの進化 / 次の楽しみ)を §3.4 通り
+  - L6(recap)分はテーブルに含めるが Phase 3.1 では発火しない(Lesson6Recap が画面全体で祝うため)
+- 主な変更ファイル: `lib/three-point-templates.ts`(新規)
+- 要件定義書との差分: **なし**
+- 自己評価: **OK**(18 件すべて埋まり、tsc / lint クリーン)
+- コミット: `5905a77`
+
+## T16: 3 点セット自動表示 UI
+
+- 対応要件: §3.4 / §9.6 / §10.5「3 点セットを大きく表示、他のメッセージと差別化」
+- 実装内容:
+  - `types/chat.ts` の `ChatMessage` に **kind="three-points"** + `threePoints?: ThreePointsPayload` フィールドを追加
+  - `LessonWorkspace` の lesson_completed ブランチで `classifyEffort(maxTries, totalHints)` → `getThreePoints(lesson.id, effort)` で template 取得 → `appendMessage({kind:"three-points", threePoints, content:plaintext fallback})`。**recap (Lesson 6) はスキップ**
+  - `hintRequestsRef` を新設し `handleHint` 内で per-step インクリメント
+  - `ChatPanel` に `ThreePointsCard` サブコンポーネント:3 セクション縦並び(🪄 できたこと / 🌱 カードの進化 / 🎁 次の楽しみ)、紫→ピンクのグラデ、`self-stretch` で chat 列全幅、内部は `ReactMarkdown` で技術名注釈をレンダー
+  - `appendMessage` を hook 順序の都合で上に hoist、`handleRestart` で `hintRequestsRef.current = {}` を追加
+- 主な変更ファイル: `types/chat.ts` / `components/LessonWorkspace.tsx` / `components/ChatPanel.tsx`
+- 要件定義書との差分: **なし**
+- 連動 / 未対応 TODO: L1 の Lesson1ClearReport(LessonPanel 側)と 3 点セット(ChatPanel 側)は別ペインなので併存して問題なし
+- 自己評価: **OK**(tsc / lint クリーン、E2E 確認は Codex Review 後)
+
+## T17: Lesson 6 後の課金前メッセージ + CTA 2 ボタン
+
+- 対応要件: §11.4 / §11.5 / §11.7 / §13.5(Stripe 不可)
+- 実装内容:
+  - 新規 [components/UpsellBlock.tsx](../components/UpsellBlock.tsx):
+    - §11.4 のメッセージを `UPSELL_LEAD` 定数で構造化(伴走 / 完成 / シェアの 3 ベクトル)
+    - 主ボタン「SparkPlus でカードを育てる(早期応援 月 498 円)」 + 副ボタン「後で考える」(親 `onDismiss` で CTA 畳み)
+    - 主ボタン onClick = inline notice を表示。**学習者向け文言**で「もうすぐ公開予定」「楽しみに待っていてくださいね 🎈」(暗黙判断 5 を文言改善 — 「Phase 3.2」「検証フィードバック」のような開発者ジャーゴン排除)
+    - `// TODO Phase 3.2: Stripe Checkout` コメント明示
+  - `Lesson6Recap` から旧 inline placeholder を `<UpsellBlock onDismiss={...} />` に置換
+- 主な変更ファイル: `components/UpsellBlock.tsx`(新規)/ `components/Lesson6Recap.tsx`
+- 要件定義書との差分: **なし**
+- 自己評価: **OK**
+
+## T18: 未来プレビュー UI(現在のカード vs 未来のカード)
+
+- 対応要件: §11.6 / §6 Lesson 6
+- 実装内容:
+  - 新規 [components/FuturePreview.tsx](../components/FuturePreview.tsx):
+    - 2 つの iframe を side-by-side 配置(`grid grid-cols-2 gap-3`)、両方 `sandbox=""`(最小権限)
+    - 左: 「今のカード」(白背景 + 黒文字 + シンプル構造)
+    - 右: 「未来のカード」(紫→ピンクのグラデ背景 + 角丸カード + タグ風リスト + 影)
+    - 矢印 + 「**SparkPlus** でここに到達」キャプション
+    - 未来カード側のみ `motion-safe:animate-[future-card-pulse_3s]` で subtle pulse
+  - `app/globals.css` に `@keyframes future-card-pulse`(box-shadow + translateY を 50% でピーク)
+  - `Lesson6Recap` から旧 `FUTURE_PREVIEW_BULLETS` placeholder を `<FuturePreview />` に置換
+- 主な変更ファイル: `components/FuturePreview.tsx`(新規) / `app/globals.css` / `components/Lesson6Recap.tsx`
+- 要件定義書との差分:
+  - **軽微あり**:§6 Lesson 6「未来のカードを 1 秒だけ見せる」を、繰り返しの subtle pulse(`motion-safe:animate-[3s]`)に翻訳。文字通り 1 秒だけ表示すると「見落とすリスク」+「過剰アニメ違和感」があるため、reduced-motion 対応を担保しつつ「もうすぐ手が届く」感を継続的に出す形に調整
+- 自己評価: **OK**(`/lesson/6` 200、iframe 2 つ、`今のカード` / `未来のカード` 文言確認)
+
 ---
 
 ## Phase 3.1 完了時のサマリ(T20 / T21 完了後に記入)
