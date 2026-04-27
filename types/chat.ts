@@ -93,6 +93,13 @@ export type ChatResponse =
   | ChatResponseTextual
   | ChatResponseError;
 
+/** §3.4 の 3 点セット payload。kind === "three-points" の Message が運ぶ。 */
+export type ThreePointsPayload = {
+  didLearn: string;
+  cardEvolved: string;
+  nextFun: string;
+};
+
 // In-memory chat history entry for the UI. Not part of the API wire format.
 export type ChatMessage = {
   id: string;
@@ -107,7 +114,10 @@ export type ChatMessage = {
     | "improve"
     | "summary"
     | "diagnose"
+    | "three-points"
     | "error";
   /** Only set for kind === "judge". */
   correct?: boolean;
+  /** Only set for kind === "three-points". */
+  threePoints?: ThreePointsPayload;
 };

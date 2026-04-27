@@ -9,17 +9,33 @@ const QUESTION_MAX_LENGTH = 500;
 
 type Props = {
   messages: ChatMessage[];
+
+  // §9.3 / T14 — 5 つの常設ボタンに対応する Sparkコーチハンドラ。
   onHint: () => void;
+  onDiagnose: () => void;
+  onExplain: () => void;
+  onSummary: () => void;
+  onImprove: () => void;
   onAsk: (question: string) => void;
+
+  // 各ボタン個別の busy フラグ(ボタンラベル切替用)。
   isHinting: boolean;
+  isDiagnosing: boolean;
+  isExplaining: boolean;
+  isSummarizing: boolean;
+  isImproving: boolean;
   isAsking: boolean;
+
   /**
-   * True while *any* AI flow (judge / hint / question) is in flight.
-   * The chat surface gates all inputs on this so the learner can't queue
-   * up extra requests that would silently get dropped by the workspace.
+   * True while *any* AI flow is in flight. すべての input をここで gate
+   * するので、学習者は重複リクエストを投げられない。
    */
   isBusy: boolean;
+
+  /** Lesson 6 (recap) や 既に最終ステップに到達した場面で hint / diagnose
+   *  を非アクティブ化するためのフラグ。 */
   disableHint?: boolean;
+  disableDiagnose?: boolean;
 };
 
 const messageMarkdownComponents = {
@@ -51,6 +67,14 @@ function bubbleClass(message: ChatMessage): string {
       return `${base} bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-pink-500/40 text-pink-100 self-start`;
     case "hint":
       return `${base} bg-sky-500/15 border border-sky-500/40 text-sky-100 self-start`;
+    case "diagnose":
+      return `${base} bg-amber-500/10 border border-amber-500/30 text-amber-50 self-start`;
+    case "explain":
+      return `${base} bg-violet-500/15 border border-violet-500/40 text-violet-100 self-start`;
+    case "improve":
+      return `${base} bg-emerald-500/15 border border-emerald-500/40 text-emerald-100 self-start`;
+    case "summary":
+      return `${base} bg-gradient-to-r from-purple-500/15 to-pink-500/15 border border-pink-500/30 text-pink-50 self-start`;
     case "error":
       return `${base} bg-rose-500/15 border border-rose-500/40 text-rose-100 self-start`;
     case "question":
@@ -68,22 +92,160 @@ function bubbleLabel(message: ChatMessage): string | null {
       return "🎉 グッジョブ!";
     case "hint":
       return "💡 ヒント";
+    case "diagnose":
+      return "🔍 どこが違う?";
+    case "explain":
+      return "📖 やさしく説明";
+    case "improve":
+      return "🎯 もっと良くしたい";
+    case "summary":
+      return "✨ できたこと";
     case "error":
       return "⚠ エラー";
+    case "three-points":
+      return null; // three-points は専用カードに切り出すのでラベル不要
     case "question":
     default:
       return "先生";
   }
 }
 
+/**
+ * §3.4 / §10.5: レッスン完了時の 3 点セットは、他のメッセージバブル
+ * とは明確に差別化された「大きいお祝いカード」で出す。Lesson6Recap の
+ * 入口に対する小サイズ版という位置づけ。
+ */
+function ThreePointsCard({ message }: { message: ChatMessage }) {
+  const tps = message.threePoints;
+  if (!tps) return null;
+  const sections: ReadonlyArray<{ icon: string; title: string; body: string }> =
+    [
+      { icon: "🪄", title: "今日できるようになったこと", body: tps.didLearn },
+      { icon: "🌱", title: "あなたのカードの進化", body: tps.cardEvolved },
+      { icon: "🎁", title: "次の楽しみ", body: tps.nextFun },
+    ];
+  return (
+    <article className="self-stretch rounded-2xl border border-pink-500/40 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-pink-500/15 p-4 space-y-3 shadow-lg shadow-purple-500/10">
+      <header className="flex items-center gap-2">
+        <span className="text-xl" aria-hidden>
+          🎉
+        </span>
+        <h3 className="text-sm font-bold text-white">レッスン完了!3 点セット</h3>
+      </header>
+      <ul className="space-y-2">
+        {sections.map((s) => (
+          <li key={s.title} className="flex gap-2 items-start text-sm">
+            <span className="text-base flex-none mt-0.5" aria-hidden>
+              {s.icon}
+            </span>
+            <div>
+              <p className="text-[0.7rem] uppercase tracking-widest text-pink-300/90 font-semibold mb-0.5">
+                {s.title}
+              </p>
+              <div className="text-slate-100 leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={messageMarkdownComponents}
+                >
+                  {s.body}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
+/** §9.3 の 5 ボタンを 2x3 グリッド + 5 つ目フル幅で並べる(暗黙判断 2)。 */
+function QuickActions(props: {
+  onHint: () => void;
+  onDiagnose: () => void;
+  onExplain: () => void;
+  onSummary: () => void;
+  onImprove: () => void;
+  isHinting: boolean;
+  isDiagnosing: boolean;
+  isExplaining: boolean;
+  isSummarizing: boolean;
+  isImproving: boolean;
+  isBusy: boolean;
+  disableHint: boolean;
+  disableDiagnose: boolean;
+}) {
+  const baseBtn =
+    "rounded-lg px-2 py-1.5 text-xs font-medium transition hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed border";
+
+  return (
+    <div className="grid grid-cols-2 gap-1.5 px-3 py-2 border-b border-slate-800/80">
+      <button
+        type="button"
+        onClick={props.onHint}
+        disabled={props.isBusy || props.disableHint}
+        className={`${baseBtn} bg-sky-500/15 border-sky-500/40 text-sky-200 hover:bg-sky-500/25`}
+        title={props.disableHint ? "完了済みのレッスンでは使えません" : ""}
+      >
+        {props.isHinting ? "考え中…" : "💡 ヒントが欲しい"}
+      </button>
+      <button
+        type="button"
+        onClick={props.onDiagnose}
+        disabled={props.isBusy || props.disableDiagnose}
+        className={`${baseBtn} bg-amber-500/15 border-amber-500/40 text-amber-200 hover:bg-amber-500/25`}
+        title={
+          props.disableDiagnose
+            ? "完了済みのレッスンでは使えません"
+            : "今のコードと正解を比べて、違いを 1 か所だけ教えます(進行は起きません)"
+        }
+      >
+        {props.isDiagnosing ? "考え中…" : "🔍 どこが違う?"}
+      </button>
+      <button
+        type="button"
+        onClick={props.onExplain}
+        disabled={props.isBusy}
+        className={`${baseBtn} bg-violet-500/15 border-violet-500/40 text-violet-200 hover:bg-violet-500/25`}
+      >
+        {props.isExplaining ? "考え中…" : "📖 やさしく説明して"}
+      </button>
+      <button
+        type="button"
+        onClick={props.onSummary}
+        disabled={props.isBusy}
+        className={`${baseBtn} bg-pink-500/15 border-pink-500/40 text-pink-200 hover:bg-pink-500/25`}
+      >
+        {props.isSummarizing ? "考え中…" : "✨ できたことを教えて"}
+      </button>
+      <button
+        type="button"
+        onClick={props.onImprove}
+        disabled={props.isBusy}
+        className={`${baseBtn} col-span-2 bg-emerald-500/15 border-emerald-500/40 text-emerald-200 hover:bg-emerald-500/25`}
+      >
+        {props.isImproving ? "考え中…" : "🎯 もっと良くしたい"}
+      </button>
+    </div>
+  );
+}
+
 export function ChatPanel({
   messages,
   onHint,
+  onDiagnose,
+  onExplain,
+  onSummary,
+  onImprove,
   onAsk,
   isHinting,
+  isDiagnosing,
+  isExplaining,
+  isSummarizing,
+  isImproving,
   isAsking,
   isBusy,
   disableHint = false,
+  disableDiagnose = false,
 }: Props) {
   const [draft, setDraft] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -103,28 +265,37 @@ export function ChatPanel({
     setDraft("");
   };
 
+  const showThinking =
+    isHinting ||
+    isAsking ||
+    isDiagnosing ||
+    isExplaining ||
+    isSummarizing ||
+    isImproving;
+
   return (
     <div className="h-full flex flex-col bg-slate-900/70">
       <div className="flex items-center justify-between px-4 py-2 border-b border-slate-800/80">
         <p className="text-xs uppercase tracking-widest font-semibold text-slate-400">
-          AI チャット
+          Sparkコーチ
         </p>
-        <button
-          type="button"
-          onClick={onHint}
-          disabled={isBusy || disableHint}
-          className="text-xs px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-500/40 text-sky-200 transition hover:bg-sky-500/25 hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:cursor-not-allowed"
-          title={
-            disableHint
-              ? "完了済みのレッスンではヒントは不要です"
-              : isBusy && !isHinting
-                ? "別の処理が進行中です…"
-                : ""
-          }
-        >
-          {isHinting ? "考え中…" : "💡 ヒントが欲しい"}
-        </button>
       </div>
+
+      <QuickActions
+        onHint={onHint}
+        onDiagnose={onDiagnose}
+        onExplain={onExplain}
+        onSummary={onSummary}
+        onImprove={onImprove}
+        isHinting={isHinting}
+        isDiagnosing={isDiagnosing}
+        isExplaining={isExplaining}
+        isSummarizing={isSummarizing}
+        isImproving={isImproving}
+        isBusy={isBusy}
+        disableHint={disableHint}
+        disableDiagnose={disableDiagnose}
+      />
 
       <div
         ref={scrollerRef}
@@ -136,32 +307,38 @@ export function ChatPanel({
       >
         {messages.length === 0 ? (
           <div className="m-auto text-center text-slate-500 text-xs">
-            <p className="mb-1">話しかけてみよう</p>
-            <p>判定 / ヒント / 自由質問が使えます</p>
+            <p className="mb-1">先生に話しかけてみよう</p>
+            <p>上のボタンか、下の入力欄からどうぞ</p>
           </div>
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.id}
-              className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
-            >
-              {bubbleLabel(m) && (
-                <span className="text-[0.65rem] uppercase tracking-widest text-slate-500 mb-0.5 px-1">
-                  {bubbleLabel(m)}
-                </span>
-              )}
-              <div className={bubbleClass(m)}>
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={messageMarkdownComponents}
-                >
-                  {m.content}
-                </ReactMarkdown>
+          messages.map((m) => {
+            // 3 点セットは専用カードで全幅表示。それ以外は従来のバブル。
+            if (m.kind === "three-points") {
+              return <ThreePointsCard key={m.id} message={m} />;
+            }
+            return (
+              <div
+                key={m.id}
+                className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
+              >
+                {bubbleLabel(m) && (
+                  <span className="text-[0.65rem] uppercase tracking-widest text-slate-500 mb-0.5 px-1">
+                    {bubbleLabel(m)}
+                  </span>
+                )}
+                <div className={bubbleClass(m)}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={messageMarkdownComponents}
+                  >
+                    {m.content}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
-        {(isHinting || isAsking) && (
+        {showThinking && (
           <div className="flex items-start">
             <div className="rounded-xl px-3 py-2 bg-slate-800/60 border border-slate-700/40 text-slate-400 text-sm flex items-center gap-2">
               <span className="flex gap-1">
@@ -187,7 +364,6 @@ export function ChatPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              // Enter to send (Shift+Enter / IME composition still inserts a newline).
               if (
                 e.key === "Enter" &&
                 !e.shiftKey &&
@@ -200,7 +376,7 @@ export function ChatPanel({
             placeholder={
               isBusy
                 ? "先生が考え中…"
-                : "先生に質問してみよう…(Enter で送信、Shift+Enter で改行)"
+                : "自由に質問してみよう…(Enter で送信、Shift+Enter で改行)"
             }
             rows={2}
             disabled={isBusy}

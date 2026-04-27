@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLesson } from "@/lib/lessons";
+import {
+  classifyEffort,
+  getThreePoints,
+} from "@/lib/three-point-templates";
 import { useEventLogger } from "@/lib/use-event-logger";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
 import { ThreePaneLayout } from "./ThreePaneLayout";
@@ -17,7 +21,15 @@ import { LocationBar } from "./LocationBar";
 // だが、表示分母は最終形で固定して 3 周構造の全体像を初心者に常に見せる。
 const TOTAL_LESSONS = 16;
 
-type BusyKind = "judge" | "hint" | "question" | null;
+type BusyKind =
+  | "judge"
+  | "hint"
+  | "question"
+  | "explain"
+  | "improve"
+  | "summary"
+  | "diagnose"
+  | null;
 
 function newId(): string {
   return Math.random().toString(36).slice(2, 10);
@@ -96,9 +108,20 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   // and step_completed.try_count so the report doesn't have to count
   // events itself.
   const judgeAttemptsRef = useRef<Record<string, number>>({});
+  // Per-step hint request counter; combined with judgeAttemptsRef to
+  // classify the learner's effort and pick the right 3-point template
+  // (T15 / T16) when the lesson completes.
+  const hintRequestsRef = useRef<Record<string, number>>({});
   const lessonStartedRef = useRef(false);
   const lessonCompletedRef = useRef(false);
   const prevStepIdRef = useRef<string>(currentStep.id);
+
+  // appendMessage is hoisted above the useEffects below because the
+  // step-transition effect now uses it (to fire the 3-point set on
+  // lesson_completed).
+  const appendMessage = useCallback((m: ChatMessage) => {
+    setMessages((prev) => [...prev, m]);
+  }, []);
 
   // First-mount: lesson_started + step_started for the initial step.
   useEffect(() => {
@@ -138,8 +161,31 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
       const tryCount = judgeAttemptsRef.current[currentStep.id] ?? 0;
       log.stepCompleted(currentStep.id, tryCount);
       log.lessonCompleted();
+
+      // §3.4 / §9.6 / T15-T16: append the 3-point set message to the
+      // chat log. Skip recap lessons (Lesson 6 has its own celebration
+      // panel) and skip if the lookup yields nothing (e.g. lessons
+      // not yet covered by templates).
+      if (lesson.kind !== "recap") {
+        const tryValues = Object.values(judgeAttemptsRef.current);
+        const hintValues = Object.values(hintRequestsRef.current);
+        const maxTries = tryValues.length > 0 ? Math.max(...tryValues) : 0;
+        const totalHints = hintValues.reduce((a, b) => a + b, 0);
+        const effort = classifyEffort(maxTries, totalHints);
+        const tps = getThreePoints(lesson.id, effort);
+        if (tps) {
+          appendMessage({
+            id: newId(),
+            role: "assistant",
+            kind: "three-points",
+            // Plain-text fallback for screen readers / older renderers.
+            content: `今日できるようになったこと: ${tps.didLearn}\nあなたのカードの進化: ${tps.cardEvolved}\n次の楽しみ: ${tps.nextFun}`,
+            threePoints: tps,
+          });
+        }
+      }
     }
-  }, [currentStep.id, isLastStep, log]);
+  }, [currentStep.id, isLastStep, log, lesson.id, lesson.kind, appendMessage]);
 
   // Auto-clear the advance banner. The 3.5s window is long enough to
   // read but short enough that it's gone before the next click.
@@ -148,10 +194,6 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     const id = setTimeout(() => setAdvanceNotice(null), 3500);
     return () => clearTimeout(id);
   }, [advanceNotice]);
-
-  const appendMessage = useCallback((m: ChatMessage) => {
-    setMessages((prev) => [...prev, m]);
-  }, []);
 
   // Wrap setCode so code edits flow into the throttled code_changed log.
   const handleCodeChange = useCallback(
@@ -253,6 +295,10 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const handleHint = useCallback(async () => {
     if (busy) return;
     if (isLastStep) return;
+    // Track per-step hint count so the 3-point set classifier can pick
+    // the right template at lesson_completed.
+    hintRequestsRef.current[currentStep.id] =
+      (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
     log.hintRequested(currentStep.id);
     setBusy("hint");
     try {
@@ -287,6 +333,156 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
       setBusy(null);
     }
   }, [busy, isLastStep, currentStep.id, code, appendMessage, log]);
+
+  // ─── T14: 4 つの新規 Sparkコーチ ハンドラ ──────────────────────────
+  // すべて handleHint と同じ「busy ガード → POST → メッセージ append」
+  // パターン。判定や進行は起こさない(diagnose は意図的に進めない設計)。
+
+  const handleDiagnose = useCallback(async () => {
+    if (busy) return;
+    if (isLastStep) return;
+    setBusy("diagnose");
+    try {
+      const resp = await callChat({
+        type: "diagnose",
+        stepId: currentStep.id,
+        code,
+      });
+      if (resp.type === "diagnose") {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "diagnose",
+          content: resp.message,
+        });
+      } else {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "error",
+          content: resp.message,
+        });
+      }
+    } catch (err) {
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content: `コード診断に失敗しました(${(err as Error).message})。`,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }, [busy, isLastStep, currentStep.id, code, appendMessage]);
+
+  const handleExplain = useCallback(async () => {
+    if (busy) return;
+    setBusy("explain");
+    try {
+      const resp = await callChat({
+        type: "explain",
+        stepId: currentStep.id,
+        code,
+      });
+      if (resp.type === "explain") {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "explain",
+          content: resp.message,
+        });
+      } else {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "error",
+          content: resp.message,
+        });
+      }
+    } catch (err) {
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content: `説明の取得に失敗しました(${(err as Error).message})。`,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }, [busy, currentStep.id, code, appendMessage]);
+
+  const handleImprove = useCallback(async () => {
+    if (busy) return;
+    setBusy("improve");
+    try {
+      const resp = await callChat({
+        type: "improve",
+        stepId: currentStep.id,
+        code,
+      });
+      if (resp.type === "improve") {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "improve",
+          content: resp.message,
+        });
+      } else {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "error",
+          content: resp.message,
+        });
+      }
+    } catch (err) {
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content: `予告の取得に失敗しました(${(err as Error).message})。`,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }, [busy, currentStep.id, code, appendMessage]);
+
+  const handleSummary = useCallback(async () => {
+    if (busy) return;
+    if (!log.sessionId) return; // SSR or storage-blocked: silent skip
+    setBusy("summary");
+    try {
+      const resp = await callChat({
+        type: "summary",
+        stepId: currentStep.id,
+        sessionId: log.sessionId,
+      });
+      if (resp.type === "summary") {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "summary",
+          content: resp.message,
+        });
+      } else {
+        appendMessage({
+          id: newId(),
+          role: "assistant",
+          kind: "error",
+          content: resp.message,
+        });
+      }
+    } catch (err) {
+      appendMessage({
+        id: newId(),
+        role: "assistant",
+        kind: "error",
+        content: `振り返りの取得に失敗しました(${(err as Error).message})。`,
+      });
+    } finally {
+      setBusy(null);
+    }
+  }, [busy, currentStep.id, log.sessionId, appendMessage]);
 
   const handleQuestion = useCallback(
     async (question: string) => {
@@ -346,6 +542,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     setStepIndex(0);
     setAdvanceNotice(null);
     judgeAttemptsRef.current = {};
+    hintRequestsRef.current = {};
     lessonStartedRef.current = false;
     lessonCompletedRef.current = false;
     prevStepIdRef.current = lesson.steps[0].id;
@@ -388,11 +585,20 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           <ChatPanel
             messages={messages}
             onHint={handleHint}
+            onDiagnose={handleDiagnose}
+            onExplain={handleExplain}
+            onSummary={handleSummary}
+            onImprove={handleImprove}
             onAsk={handleQuestion}
             isHinting={busy === "hint"}
+            isDiagnosing={busy === "diagnose"}
+            isExplaining={busy === "explain"}
+            isSummarizing={busy === "summary"}
+            isImproving={busy === "improve"}
             isAsking={busy === "question"}
             isBusy={busy !== null}
             disableHint={isLastStep}
+            disableDiagnose={isLastStep}
           />
         }
       />
