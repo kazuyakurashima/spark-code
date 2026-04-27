@@ -505,13 +505,13 @@
   - **新規 [docs/CURRICULUM.md](CURRICULUM.md)**: §5-§8 抜粋(全 16 レッスン詳細)+ Phase 3.1 実装状況サマリ + レッスンごとの実装ファイルポインタ。冒頭に「正本は要件定義書側」と明示
   - **新規 [docs/SPARK_COACH.md](SPARK_COACH.md)**: §9 抜粋(Sparkコーチ仕様)+ Phase 3.1 実装マップ(仕様セクション → 実装ファイル / シンボル)+ §9.7 プロンプト方針 + §9.8 promotive 誘導の Phase 3.1 実装状況。グループ 4 判断済み事項への参照リンクも追加
   - **更新 [docs/PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)**:
-    - Status 行を「Phase 3.1 完了」へ。最終更新日を 2026-04-27 に
+    - Status 行を「Phase 3.1 実装完了・検証中」へ。最終更新日を 2026-04-27 に(T20 の整理点フィードバックで `Phase 3.1 完了` → `実装完了・検証中` に再修正済 — 完了確定は T20 手動 + T21 APPROVED 後)
     - 冒頭に **関連ドキュメント表** を追加(本書 / 要件定義書 / CURRICULUM / SPARK_COACH / TODO / CHECK / DEPLOY)
     - 新 §2「Phase 進捗(本書の現在地)」を追加(Phase 1 → 3.4 のロードマップ + Phase 3.1 で達成したことの 7 項目箇条書き)
     - 旧 §2(MVP のスコープ)を §3 に降格して「歴史的記録」とラベル
     - §5(AI の役割)を 4 機能 → **8 機能** に更新(judge / hint / praise / question / explain / improve / summary / diagnose、進行を起こす / 起こさないも明示)
     - §6(技術スタック)に Supabase / CSRF / lang-javascript / sandbox=allow-scripts(Lesson 5) を追加
-    - §7(ファイル構成)を Phase 3.1 完了時点の **実在ファイル構成** に置換(components/lib/types/scripts/api 全部反映)
+    - §7(ファイル構成)を Phase 3.1 実装完了時点の **実在ファイル構成** に置換(components/lib/types/scripts/api 全部反映)
     - §3 以降を順番に renumber(§14→§15、§13→§14、…、§3→§4)+ 内部参照(`§14 参照` / `§2 の 3 条件`)も追従
 - 主な変更ファイル: `docs/PROJECT_OVERVIEW.md` / `docs/CURRICULUM.md`(新規)/ `docs/SPARK_COACH.md`(新規)
 - 要件定義書との差分:
@@ -533,12 +533,18 @@
     - 3 点セット 18 件存在 + `classifyEffort` 閾値が仕様通り(perfect=`maxTries<=1 && totalHints===0` / struggled=`<=3 && <=1` / persevered=else)
     - TODO_PHASE3.md(21 タスク × 82 件の対応要件参照)+ PHASE3_REQUIREMENTS_CHECK.md(T1-T19 + 判断済み事項)構造確認
   - **手動確認手順**(かず実施待ち):B-1 通し体験 / B-2 5 ボタン / B-3 3 点セット 3 種分岐 / B-4 LocationBar / B-5 課金導線 / B-6 既存回帰 — それぞれチェックボックス形式
+- **自動 A-7 の限界(B-6 で補う)**:
+  - A-7 は「書いた値が API 経由で読み戻せる」end-to-end 疎通テスト。`learning_events` テーブルの **件数の直接確認 / 重複インサート確認 / RLS 越境確認** は本テストでは見えない
+  - `/api/chat` レスポンスや `/api/log` ヘッダに **secrets が漏れていないこと** も自動側では確認していない
+  - 上記 2 つは B-6 の Supabase dashboard / DevTools 確認で消化する
 - 自動確認で見つかった問題:
   - **C-1 Vercel デプロイは Phase 3.1 反映前**:`https://spark-code-mu.vercel.app/lesson/1` は MVP 版で 5 ボタンなし、`/lesson/2-6` は 404。手動確認は **localhost** で実施するか、`git push origin main` で Vercel 自動ビルドを走らせる必要あり。Claude Code は本番デプロイを user 確認なしには行わない
   - C-2 ローカル dev に対する自動確認では問題なし
 - 主な変更ファイル: `docs/T20_CHECKLIST.md`(新規)
 - 要件定義書との差分: **なし**
-- 自己評価: **OK(自動確認部分)/ 手動確認待ち**(§18.1 #5/#6/#8/#9 は自動確認で確定。#1/#2/#3/#4/#7 はかず手動確認後に最終判定。#10 は T21 で実施)
+- 自己評価: **自動部分は OK / 手動確認待ち**
+  - §18.1 内訳:**手動不要 = 5 項目**(#5 / #6 / #8 / #9 / #10)/ **現時点で確定 = 4 項目**(#5 / #6 / #8 / #9)/ **#10 は T21 待ち** / **手動確認待ち = 5 項目**(#1 / #2 / #3 / #4 / #7)
+  - 「自動で 5 項目確定」と要約すると不正確(手動不要は 5 項目だが、確定は 4 項目)。本書および T20_CHECKLIST.md の記述は 3 段(手動不要 / 現時点で確定 / T21 待ち)で表現すること
 
 ---
 

@@ -1,6 +1,6 @@
 # SparkCode — プロジェクト概要
 
-> **Status**: **Phase 3.1 完了**(Lesson 1-6 / 1 周目通し動作 / Sparkコーチ 4 役割 + 5 ボタン + 3 点セット + Lesson 6 課金導線 UI まで実装。Codex Review Phase 1-3 通算 12 ラウンドで APPROVED 累積、Phase 3.1 グループ 4 は判断済み事項 2 件を保持)/ Phase 3.2(課金本実装)着手前
+> **Status**: **Phase 3.1 実装完了・検証中**(Lesson 1-6 / 1 周目通し動作 / Sparkコーチ 4 役割 + 5 ボタン + 3 点セット + Lesson 6 課金導線 UI まで実装済。**T20 手動確認 + T21 Codex Review APPROVED 後に「Phase 3.1 完了」へ確定**。Codex Review Phase 1-3 通算 12 ラウンドで APPROVED 累積、Phase 3.1 グループ 4 は判断済み事項 2 件を保持)/ Phase 3.2(課金本実装)着手前
 > **最終更新**: 2026-04-27
 
 ---
@@ -44,12 +44,12 @@ SparkCode は段階的に育てる前提で設計されており、各 Phase ご
 | **Phase 1**(MVP コア) | 3 ペイン UI + Lesson 1 + プレビュー + コードエディタ | ✅ 完了(Codex 3 ラウンド APPROVED)|
 | **Phase 2**(MVP 仕上げ) | AI 結線(judge/hint/praise/question)+ Lesson 1 通し + エラーハンドリング | ✅ 完了(Codex 3 ラウンド APPROVED)|
 | **Phase 2.5**(基盤) | Supabase 結線 + `learning_events` + 進捗保存 | ✅ 完了 |
-| **Phase 3.1**(1 周目) | Lesson 1-6 + Sparkコーチ 4 役割 + 5 ボタン + 3 点セット + 課金 UI | ✅ 完了(本書最終更新時点)|
+| **Phase 3.1**(1 周目) | Lesson 1-6 + Sparkコーチ 4 役割 + 5 ボタン + 3 点セット + 課金 UI | 🟡 **実装完了・検証中**(T20 手動確認 + T21 Codex Review APPROVED で確定)|
 | Phase 3.2 | 課金本実装(Stripe)+ 認証 + §9.8 promotive 誘導 | ⏳ 未着手 |
 | Phase 3.3 | Lesson 7-11(2 周目)| ⏳ 未着手 |
 | Phase 3.4 | Lesson 12-16(3 周目)+ 共有 URL | ⏳ 未着手 |
 
-### Phase 3.1 で達成したこと(2026-04 時点)
+### Phase 3.1 で実装が完了している範囲(検証中、2026-04 時点)
 
 - **6 レッスン通し動作**:Lesson 1 (h1) → 2 (p) → 3 (ul/li) → 4 (CSS color) → 5 (1 行 JS / textContent) → 6 (recap + 課金導線 UI)
 - **Sparkコーチ常設 5 ボタン**:ヒント / どこが違う? / やさしく説明して / できたことを教えて / もっと良くしたい(2x3 グリッド + full-width)
@@ -207,7 +207,7 @@ SparkCode は段階的に育てる前提で設計されており、各 Phase ご
 
 ---
 
-## 7. ファイル構成(Phase 3.1 完了時点)
+## 7. ファイル構成(Phase 3.1 実装完了時点)
 
 ```
 app/
