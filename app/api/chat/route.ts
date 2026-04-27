@@ -293,36 +293,58 @@ export async function POST(request: NextRequest) {
             message: SUMMARY_TOO_EARLY_MESSAGE,
           } satisfies ChatResponse);
         }
-        // Past the gate: fetch the most recent 40 events of the types
-        // that actually feed the retrospective. Excluding `code_changed`
-        // (high-volume but low-signal) and `step_started` keeps the
-        // prompt window aligned with the gate — the data Claude sees
-        // includes the same completion / hint / question events the
-        // gate counted, even on long sessions.
-        const SUMMARY_EVENT_TYPES: LearningEventType[] = [
-          "lesson_started",
+        // Past the gate: fetch the prompt window in two pieces and merge,
+        // so the data the model sees ALWAYS contains the completion
+        // events that justified the gate. A single .limit(40) on a
+        // long-running session can push completions out of the window
+        // while leaving question/hint rows in, which would let the
+        // gate open while Claude has nothing to ground its 3 bullets
+        // in.
+        const COMPLETION_TYPES: LearningEventType[] = [
           "lesson_completed",
           "step_completed",
+        ];
+        const ACTIVITY_TYPES: LearningEventType[] = [
+          "lesson_started",
           "judge_executed",
           "hint_requested",
           "question_asked",
         ];
-        const { data, error } = await supabase
-          .from("learning_events")
-          .select("event_type, lesson_id, step_id, metadata, created_at")
-          .eq("session_id", body.sessionId)
-          .in("event_type", SUMMARY_EVENT_TYPES)
-          .order("created_at", { ascending: false })
-          .limit(40);
-        if (error) {
-          console.warn("[chat] summary supabase failed:", error);
+        const [completionsRes, activityRes] = await Promise.all([
+          supabase
+            .from("learning_events")
+            .select("event_type, lesson_id, step_id, metadata, created_at")
+            .eq("session_id", body.sessionId)
+            .in("event_type", COMPLETION_TYPES)
+            .order("created_at", { ascending: false })
+            .limit(20),
+          supabase
+            .from("learning_events")
+            .select("event_type, lesson_id, step_id, metadata, created_at")
+            .eq("session_id", body.sessionId)
+            .in("event_type", ACTIVITY_TYPES)
+            .order("created_at", { ascending: false })
+            .limit(20),
+        ]);
+        if (completionsRes.error || activityRes.error) {
+          console.warn(
+            "[chat] summary supabase failed:",
+            completionsRes.error ?? activityRes.error,
+          );
           return Response.json({
             type: "summary",
             message:
               "学習ログが取得できませんでした…少し待ってから試してください。",
           } satisfies ChatResponse);
         }
-        const rows = (data ?? []) as Array<{
+        // Merge the two windows and re-sort by created_at desc. Types are
+        // disjoint between the two queries so no dedupe is needed.
+        const rows = [
+          ...(completionsRes.data ?? []),
+          ...(activityRes.data ?? []),
+        ].sort((a, b) =>
+          a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0,
+        ) as Array<{
           event_type: string;
           lesson_id: string;
           step_id: string | null;
