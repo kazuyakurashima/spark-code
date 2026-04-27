@@ -518,6 +518,28 @@
   - **なし**(§19.3 が指定する 3 ファイル + §0.4 の責任分担を満たす)
 - 自己評価: **OK**(3 ファイルとも `## 関連ドキュメント` 末尾セクションを揃えて相互ナビゲート可、CURRICULUM / SPARK_COACH 双方に Phase 3.1 実装状況テーブルを配置)
 
+## T20: Phase 3.1 通し動作テスト
+
+- 対応要件: §18.1 完了条件 10 項目
+- 実装内容:
+  - 新規 [docs/T20_CHECKLIST.md](T20_CHECKLIST.md) に 10 項目進捗表 + 自動確認結果 + かず向け手動確認手順 + 発見された問題を集約
+  - **自動確認**(localhost:3000、Claude Code 実施):
+    - `next build` ✅(2.1s でコンパイル成功、TypeScript 1.4s クリア)
+    - 全 6 レッスンページ HTTP 200 + 主要文言検出(L1-L5 で 5 ボタン揃い、L6 で recap 専用文言揃い、L5 のみ `sandbox="allow-scripts"`)
+    - LocationBar 全レッスンで「1 周目 [全体像]」+ 4 役割凡例描画
+    - `/api/chat` 全 8 タイプ(judge/hint/praise/question/explain/improve/diagnose/summary)200 + 期待 JSON
+    - `/api/log` Origin 正常時 200、未指定 / 偽 origin 403(Group 3 round 3 で導入したスキームパリティチェックが期待通り動作)
+    - `/api/log` 書き込み → `/api/report/{sid}` 読み出しで `completedSteps` が反映される end-to-end 確認
+    - 3 点セット 18 件存在 + `classifyEffort` 閾値が仕様通り(perfect=`maxTries<=1 && totalHints===0` / struggled=`<=3 && <=1` / persevered=else)
+    - TODO_PHASE3.md(21 タスク × 82 件の対応要件参照)+ PHASE3_REQUIREMENTS_CHECK.md(T1-T19 + 判断済み事項)構造確認
+  - **手動確認手順**(かず実施待ち):B-1 通し体験 / B-2 5 ボタン / B-3 3 点セット 3 種分岐 / B-4 LocationBar / B-5 課金導線 / B-6 既存回帰 — それぞれチェックボックス形式
+- 自動確認で見つかった問題:
+  - **C-1 Vercel デプロイは Phase 3.1 反映前**:`https://spark-code-mu.vercel.app/lesson/1` は MVP 版で 5 ボタンなし、`/lesson/2-6` は 404。手動確認は **localhost** で実施するか、`git push origin main` で Vercel 自動ビルドを走らせる必要あり。Claude Code は本番デプロイを user 確認なしには行わない
+  - C-2 ローカル dev に対する自動確認では問題なし
+- 主な変更ファイル: `docs/T20_CHECKLIST.md`(新規)
+- 要件定義書との差分: **なし**
+- 自己評価: **OK(自動確認部分)/ 手動確認待ち**(§18.1 #5/#6/#8/#9 は自動確認で確定。#1/#2/#3/#4/#7 はかず手動確認後に最終判定。#10 は T21 で実施)
+
 ---
 
 ## グループ 4(T14-T18)判断済み事項
