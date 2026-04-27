@@ -217,12 +217,10 @@ function QuickActions(props: {
         type="button"
         onClick={props.onSummary}
         disabled={props.isBusy || props.disableSummary}
-        className={`${baseBtn} bg-pink-500/15 border-pink-500/40 text-pink-200 hover:bg-pink-500/25`}
-        title={
-          props.disableSummary
-            ? "ブラウザの設定でセッション情報が保存できないため、この機能は使えません"
-            : ""
+        aria-describedby={
+          props.disableSummary ? "summary-disabled-help" : undefined
         }
+        className={`${baseBtn} bg-pink-500/15 border-pink-500/40 text-pink-200 hover:bg-pink-500/25`}
       >
         {props.isSummarizing ? "考え中…" : "✨ できたことを教えて"}
       </button>
@@ -234,6 +232,16 @@ function QuickActions(props: {
       >
         {props.isImproving ? "考え中…" : "🎯 もっと良くしたい"}
       </button>
+      {props.disableSummary && (
+        <p
+          id="summary-disabled-help"
+          className="col-span-2 text-[0.65rem] text-pink-300/80 leading-relaxed"
+        >
+          ※「✨ できたことを教えて」は、ブラウザの設定でセッション情報を
+          保存できないため使えません。プライベートウィンドウやストレージ
+          無効化を解除すると使えるようになります。
+        </p>
+      )}
     </div>
   );
 }

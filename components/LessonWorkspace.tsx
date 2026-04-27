@@ -295,9 +295,14 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const handleHint = useCallback(async () => {
     if (busy) return;
     if (isLastStep) return;
-    // Log the *intent* now (the learner asked for a hint), but defer the
-    // effort-classifier counter to the success branch below — a failed
-    // request shouldn't downgrade the 3-point set tier.
+    // Count the *intent* (clicking the hint button) toward effort.
+    // §9.6 talks about "ヒント使用回数 / リトライ回数" — i.e. how
+    // many times the learner asked for help — so a request that
+    // happens to error out is still a signal of struggle. We rely
+    // on the existing `if (busy) return` guard and the disabled-
+    // while-thinking button state to prevent runaway double-clicks.
+    hintRequestsRef.current[currentStep.id] =
+      (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
     log.hintRequested(currentStep.id);
     setBusy("hint");
     try {
@@ -307,9 +312,6 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         code,
       });
       if (resp.type === "hint") {
-        // The learner actually received a hint — count it toward effort.
-        hintRequestsRef.current[currentStep.id] =
-          (hintRequestsRef.current[currentStep.id] ?? 0) + 1;
         appendMessage({
           id: newId(),
           role: "assistant",
