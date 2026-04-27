@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { matchStep } from "@/lib/lessons-server";
 import { callHaikuText } from "@/lib/anthropic";
 import { getSupabaseServer } from "@/lib/supabase-server";
+import { isAllowedOrigin } from "@/lib/origin-check";
 import {
   DIAGNOSE_ALREADY_PASSING_MESSAGE,
   JUDGE_FAIL_MESSAGE_DEFAULT,
@@ -102,6 +103,18 @@ function formatEventsForSummary(
 }
 
 export async function POST(request: NextRequest) {
+  // Same-origin check: defense in depth. The summary endpoint reads
+  // learning_events keyed solely on the caller-supplied sessionId;
+  // without authentication, the only privacy boundary is "you can't
+  // hit this endpoint from outside our origin". See lib/origin-check.ts
+  // for the trade-off note (shallow check, real hardening = Phase 3.2
+  // auth + rate limiting).
+  if (!isAllowedOrigin(request)) {
+    return Response.json(
+      { type: "error", message: "forbidden origin" } satisfies ChatResponse,
+      { status: 403 },
+    );
+  }
   let body: unknown;
   try {
     body = await request.json();
@@ -244,6 +257,42 @@ export async function POST(request: NextRequest) {
       }
       case "summary": {
         const supabase = getSupabaseServer();
+        // Count completion events across the **entire** session (not just
+        // the most recent 20) to decide whether the sparseness gate
+        // fires. Doing this on .limit(20) would falsely re-trigger the
+        // "too early" message for active learners whose older completion
+        // events have rolled out of the window.
+        // Two cheap HEAD count queries instead of fetching all rows.
+        const lessonCountQ = await supabase
+          .from("learning_events")
+          .select("*", { count: "exact", head: true })
+          .eq("session_id", body.sessionId)
+          .eq("event_type", "lesson_completed");
+        const stepCountQ = await supabase
+          .from("learning_events")
+          .select("*", { count: "exact", head: true })
+          .eq("session_id", body.sessionId)
+          .eq("event_type", "step_completed");
+        if (lessonCountQ.error || stepCountQ.error) {
+          console.warn(
+            "[chat] summary count supabase failed:",
+            lessonCountQ.error ?? stepCountQ.error,
+          );
+          return Response.json({
+            type: "summary",
+            message:
+              "学習ログが取得できませんでした…少し待ってから試してください。",
+          } satisfies ChatResponse);
+        }
+        const lessonCompletions = lessonCountQ.count ?? 0;
+        const stepCompletions = stepCountQ.count ?? 0;
+        if (lessonCompletions === 0 && stepCompletions < 3) {
+          return Response.json({
+            type: "summary",
+            message: SUMMARY_TOO_EARLY_MESSAGE,
+          } satisfies ChatResponse);
+        }
+        // Past the gate: fetch the most recent 20 rows for the prompt.
         const { data, error } = await supabase
           .from("learning_events")
           .select("event_type, lesson_id, step_id, metadata, created_at")
@@ -265,23 +314,6 @@ export async function POST(request: NextRequest) {
           metadata: Record<string, unknown>;
           created_at: string;
         }>;
-        // Sparseness check: when the learner has barely started, there's
-        // nothing meaningful to summarize. Surface a friendly nudge
-        // instead of asking Claude to fabricate three accomplishments.
-        // Threshold: at least 1 lesson_completed OR at least 3 step_completed.
-        const lessonCompletions = rows.filter(
-          (r) => r.event_type === "lesson_completed",
-        ).length;
-        const stepCompletions = rows.filter(
-          (r) => r.event_type === "step_completed",
-        ).length;
-        if (lessonCompletions === 0 && stepCompletions < 3) {
-          return Response.json({
-            type: "summary",
-            message: SUMMARY_TOO_EARLY_MESSAGE,
-          } satisfies ChatResponse);
-        }
-        // Has data: ask Claude for the 3-bullet retrospective.
         const recentEvents = formatEventsForSummary(rows);
         const { system, user } = buildSummaryPrompt({
           stepId: body.stepId,

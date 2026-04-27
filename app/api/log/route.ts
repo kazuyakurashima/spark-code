@@ -1,32 +1,10 @@
 import type { NextRequest } from "next/server";
 import { getSupabaseAnonServer } from "@/lib/supabase-server";
+import { isAllowedOrigin } from "@/lib/origin-check";
 import type { LearningEventType } from "@/types/supabase";
 
 // supabase-js uses Node APIs, so keep this on the Node runtime.
 export const runtime = "nodejs";
-
-/**
- * Reject requests that don't come from our own origin. This is a
- * **shallow CSRF/drive-by check, not real auth** — anyone scripting a
- * client can forge a matching Origin header and pass. It blocks naive
- * curl/bot abuse and keeps casual third-party embeds from writing,
- * but not a determined attacker.
- *
- * Real hardening (rate limiting / HMAC-signed tokens / per-session
- * insert quota) is tracked as Phase 3 work; until then the route's
- * write power is also constrained by RLS via the anon client.
- */
-function isAllowedOrigin(request: NextRequest): boolean {
-  const host = request.headers.get("host");
-  const origin = request.headers.get("origin");
-  if (!host || !origin) return false;
-  try {
-    const originHost = new URL(origin).host;
-    return originHost === host;
-  } catch {
-    return false;
-  }
-}
 
 const VALID_EVENT_TYPES: ReadonlySet<LearningEventType> = new Set<LearningEventType>([
   "lesson_started",
