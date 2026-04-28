@@ -28,7 +28,19 @@ export default function RootLayout({
       lang="ja"
       className={`${inter.variable} ${notoSansJp.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      {/*
+       * suppressHydrationWarning is scoped to the <body> element only
+       * (it doesn't propagate to children) and is the React/Next.js-
+       * recommended escape hatch for browser extensions that mutate
+       * <html> / <body> before hydration. Feedly Mini, Grammarly,
+       * password managers, and dark-mode extensions all do this and
+       * each adds noise to the dev console without indicating any
+       * real bug. App-level hydration mismatches inside `{children}`
+       * are still reported normally.
+       */}
+      <body className="min-h-full" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
