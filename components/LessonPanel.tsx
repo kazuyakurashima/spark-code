@@ -79,8 +79,19 @@ export function LessonPanel({
   const currentStep = lesson.steps[currentStepIndex];
   const isLast = currentStepIndex === lesson.steps.length - 1;
   // T28 — このステップを既に judge 通過しているか。true のときは
-  // CTA が「次のステップに進む」に切り替わり、紙吹雪も出る。
+  // CTA が「次のステップに進む」に切り替わる。
   const isPassedHere = passedStepId === currentStep.id;
+  // T28 follow-up — Lessons 2-5 は実質 2 ステップ(X-1 で課題、X-2 が
+  // 「完成!」 = LessonClearReport に置き換わる祝祭ステップ)。X-1 で
+  // judge が通った瞬間に紙吹雪を出すと、そのあと「次へ」をクリックして
+  // すぐ LessonClearReport の大きい紙吹雪 + 🎉 が走るので、二重祝祭で
+  // 学習者が混乱する。次のステップが clear 画面のときは:
+  //   - 中間の紙吹雪は **出さない**(clear report 側に祝祭を一本化)
+  //   - CTA を「Lesson X をクリア →」に変えて、次クリックの行き先を明示
+  // Lesson 1 は 3 ステップなので 1-1 → 1-2 では従来どおり紙吹雪が出る。
+  const nextIsClearScreen =
+    !isLast && currentStepIndex === lesson.steps.length - 2;
+  const showMidPassConfetti = isPassedHere && !nextIsClearScreen;
 
   return (
     <div className="h-full p-6 overflow-y-auto text-slate-200 flex flex-col gap-6">
@@ -178,18 +189,25 @@ export function LessonPanel({
 
       {/* T28 — judge 通過直後だけ confetti を出す。`key={currentStep.id}`
           で remount を強制し、次ステップで passedStepId が立ったときに
-          再度アニメが走る。 */}
-      {isPassedHere && <Confetti key={currentStep.id} pieces={35} />}
+          再度アニメが走る。次が clear 画面のときは LessonClearReport
+          側の紙吹雪に一本化するため、ここでは出さない。 */}
+      {showMidPassConfetti && <Confetti key={currentStep.id} pieces={35} />}
 
       {!isLast &&
         (isPassedHere ? (
           <button
             type="button"
             onClick={onAdvance}
-            aria-label="次のステップに進む"
+            aria-label={
+              nextIsClearScreen
+                ? `Lesson ${lesson.id} をクリアする`
+                : "次のステップに進む"
+            }
             className="mt-auto rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-0.5 hover:shadow-emerald-500/50 motion-safe:animate-[pass-pulse_900ms_ease-out]"
           >
-            🎉 次のステップに進む →
+            {nextIsClearScreen
+              ? `🎉 Lesson ${lesson.id} をクリア →`
+              : "🎉 次のステップに進む →"}
           </button>
         ) : (
           <button
