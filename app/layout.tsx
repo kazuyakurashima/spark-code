@@ -15,7 +15,7 @@ const notoSansJp = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: "SparkCode — HTML/CSS を楽しく学ぼう",
   description:
-    "プログラミング初心者向けの HTML/CSS 学習サービス。書いた瞬間に綺麗な何かが画面に出る。",
+    "プログラミング初心者向けの HTML/CSS 学習サービス。書いた瞬間に自分のコードが画面を変える。",
 };
 
 export default function RootLayout({

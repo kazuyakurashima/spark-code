@@ -23,15 +23,15 @@
 
 **SparkCode** は、プログラミング完全初心者のための HTML/CSS 学習 Web サービスです。
 
-コンセプトは **「見た目ワクワク × 裏で基本ガッツリ」**。
+コンセプトは **「自分で変えたワクワク × 裏で基本ガッツリ」**。
 学習者は、最終的に「動く自己紹介カード」(ホバーで浮き上がる・グラデーション背景・モダンなデザイン)を自力で作れるようになります。
-使う技術は **基本タグと CSS の基礎だけ**。背後ではちゃんと基礎を叩き込む、表層の「楽しい」を最重要視する設計です。
+使う技術は **基本タグと CSS の基礎だけ**。背後ではちゃんと基礎を叩き込み、「自分のコードで画面が変わった」実感を最重要視する設計です。
 
 ### なぜ作るか
 
 既存サービス(Progate など)は学習内容は良いが、見た目が地味で初心者の「作ってる感」が弱い。
-SparkCode は **「書いた瞬間に綺麗な何かが画面に出る」体験** を最初の 30 秒で届けることを目標にしています。
-プレビューには最初から CSS でお膳立てされた舞台が用意されていて、学習者が `<h1>` を 1 行書くだけで「お、綺麗!」となる。
+SparkCode は **「書いた瞬間に自分のコードが画面を変えた」体験** を最初の 30 秒で届けることを目標にしています。
+初期プレビューの装飾は最小限に抑え、派手さは Lesson が進むごとに、学習者が書いた HTML / CSS / JavaScript によって段階的に増えていきます。
 
 ---
 
@@ -338,7 +338,7 @@ ANTHROPIC_API_KEY=
 1. **骨組み**: 依存 install → `.env.local` / `.env.local.example` 作成 → `.gitignore` 調整 → `globals.css` と `app/layout.tsx` のテーマ/フォント差し替え → `app/page.tsx` を `/lesson/1` へ redirect ✅ **Phase 1 完了**
 2. **レッスンデータ**: `lib/lessons.ts` に Lesson 1 の 3 ステップを定義(UI とロジックの手戻り防止のため先に固める) ✅ **Phase 1 完了**(Codex レビューで `match`/`solution` を `lib/lessons-server.ts` に server-only 隔離)
 3. **3 ペインの静的レイアウト**: `app/lesson/[id]/page.tsx` + `components/ThreePaneLayout.tsx`(中身はプレースホルダ) ✅ **Phase 1 完了**
-4. **プレビュー**: `components/Preview.tsx` で iframe + srcdoc。空のエディタでもグラデ背景が見える状態を確認 ✅ **Phase 1 完了**
+4. **プレビュー**: `components/Preview.tsx` で iframe + srcdoc。空のエディタでも最小装飾の背景が見える状態を確認 ✅ **Phase 1 完了**
 5. **コードエディタ**: `components/CodeEditor.tsx` で CodeMirror を配線。入力 → 親 state → Preview の srcdoc 更新まで通す ✅ **Phase 1 完了**
    - **← ここで「書けば見た目が変わる」MVP の核が完成(体験の 80%)**
 6. **レッスンパネル**: `components/LessonPanel.tsx` で Markdown 描画 + 現在ステップのハイライト + AI 判定による「次へ」 ✅ **Phase 2 完了**
@@ -384,7 +384,7 @@ ANTHROPIC_API_KEY=
 
 1. ✅ `npm install && npm run dev` で http://localhost:3000 が `/lesson/1` にリダイレクト
 2. ✅ 3 ペイン表示(左: レッスン説明 / 中: エディタ / 右上: プレビュー / 右下: チャットプレースホルダ)
-3. ✅ エディタが空でもプレビューにグラデ背景が見える(プリセット CSS が効いている)
+3. ✅ エディタが空でもプレビューに最小装飾の背景が見える(プリセット CSS が効いている)
 4. ✅ エディタに `<h1>` を入力するとプレビューに即反映(`code` state → iframe srcDoc)
 5. ✅ iframe に `sandbox=""`(値は空文字 = 最小権限)が付いている
 6. ✅ [lib/lessons.ts](../lib/lessons.ts)(public データ)と [lib/lessons-server.ts](../lib/lessons-server.ts)(`import "server-only"` による判定データ隔離)に型付き定義が揃っている
@@ -395,8 +395,8 @@ ANTHROPIC_API_KEY=
 Phase 2 完了時点ですべて満たす。**全項目達成済み**(下記 Phase 2 セルフチェックを参照)。
 
 1. `npm install && npm run dev` → http://localhost:3000 が `/lesson/1` にリダイレクト
-2. エディタが空でも、右上プレビューにグラデ背景が見える(プリセット CSS が効いている)
-3. エディタに `<h1>名前</h1>` と打つ → プレビュー中央に大きな「名前」
+2. エディタが空でも、右上プレビューに最小装飾の背景が見える(プリセット CSS が効いている)
+3. エディタに `<h1>名前</h1>` と打つ → プレビューに「名前」
 4. Step 1-1 が緑色になり、チャット欄に **具体的な褒め、または praise 失敗時はフォールバック文言(例: 「正解!その調子!」)** が表示される
 5. Step 1-2 で `<h1>名前</h1>` のままだと **正規表現(一次判定)で不合格**になり、Step 1-1 合格状態のまま進めない旨のメッセージが表示される
 6. 名前を自分のものに変えると Step 1-2 完了、Step 1-3 で Coming Soon 画面に遷移

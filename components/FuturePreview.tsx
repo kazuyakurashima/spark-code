@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * §11.6 / §6 Lesson 6 — 「現在のカード vs 未来のカード」比較表示。
+ * §11.6 / §6 Lesson 6 — 「現在のカードサンプル vs 未来のカード」比較表示。
  *
  * 課金導線で SparkPlus の到達点を視覚で見せるための小型プレビュー。
  * Phase 3.1 では学習者の現在コードを動的にレンダリングせず、**1 周目で
- * できあがるシンプル版** を左に、**3 周目までで到達する完成形** を
- * 右に並べる。両方とも Preview と同じ sandbox=""(JS 実行なし)で安全。
+ * できあがるシンプル版のサンプル** を左に、**3 周目までで到達する
+ * 完成形サンプル** を右に並べる。両方とも Preview と同じ
+ * sandbox=""(JS 実行なし)で安全。
  *
  * 未来カード側だけ subtle pulse アニメで「もうすぐ手が届く」感を出す
  * (§6 Lesson 6 の「未来のカードを 1 秒だけ見せる」演出を、繰り返しの
@@ -65,39 +66,39 @@ function buildSrcDoc(body: string): string {
 export function FuturePreview() {
   return (
     <section
-      aria-label="今のカードと未来のカードの比較"
+      aria-label="今のカードのサンプルと未来のカードの比較"
       className="space-y-3"
     >
       <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">
-        今のカード → 未来のカード
+        今のカードのサンプル → 未来のカード
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
         {/* 現在のカード(1 周目で到達するシンプル版) */}
         <figure className="space-y-1.5">
           <figcaption className="text-[0.7rem] text-slate-400 text-center">
-            今のカード(1 周目)
+            今のカードのサンプル(1 周目)
           </figcaption>
           <div className="rounded-xl overflow-hidden border border-slate-700/60 aspect-[3/4] bg-white">
             <iframe
               srcDoc={buildSrcDoc(PRESENT_HTML)}
               sandbox=""
-              title="今のカード"
+              title="今のカードのサンプル"
               className="w-full h-full border-0 block"
             />
           </div>
         </figure>
 
-        {/* 未来のカード(SparkPlus 完了時の完成形) */}
+        {/* 未来のカード(SparkPlus 完了時の完成形サンプル) */}
         <figure className="space-y-1.5">
           <figcaption className="text-[0.7rem] text-pink-300 text-center font-semibold">
-            未来のカード(3 周目クリア時)
+            未来のカードのサンプル(3 周目クリア時)
           </figcaption>
           <div className="rounded-xl overflow-hidden border border-pink-500/50 aspect-[3/4] bg-white motion-safe:animate-[future-card-pulse_3s_ease-in-out_infinite]">
             <iframe
               srcDoc={buildSrcDoc(FUTURE_HTML)}
               sandbox=""
-              title="未来のカード"
+              title="未来のカードのサンプル"
               className="w-full h-full border-0 block"
             />
           </div>
@@ -108,7 +109,7 @@ export function FuturePreview() {
         <span className="text-pink-300" aria-hidden>
           ↑
         </span>{" "}
-        <span className="font-semibold text-pink-300">SparkPlus</span> でここに到達
+        <span className="font-semibold text-pink-300">SparkPlus</span> で自分のカードをここまで育てます
       </p>
     </section>
   );

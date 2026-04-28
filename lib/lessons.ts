@@ -77,145 +77,24 @@ export type Lesson = {
   steps: LessonStep[];
 };
 
-// Shared canvas styling. Each lesson extends this so the learner sees
-// their card visibly evolve as new elements join the page.
-const BASE_PREVIEW_CSS = `
+// Minimal stage for Lessons 1-5. The learner's code owns the visible
+// change; preset CSS only keeps the preview readable.
+const MINIMAL_PREVIEW_CSS = `
 body {
   margin: 0;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #ec4899 100%);
-  font-family: "Inter", "Noto Sans JP", system-ui, -apple-system, sans-serif;
-  color: #ffffff;
-  text-align: center;
-  padding: 2rem;
+  background: #fafafa;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding: 1rem;
   box-sizing: border-box;
-}
-`;
-
-// Lesson 1: bold centered name only.
-const LESSON_1_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
-h1 {
-  font-size: clamp(2.5rem, 9vw, 6rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0;
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-}
-`).trim();
-
-// Lesson 2: name shrinks slightly to make room for an introduction
-// paragraph. The new <p> rule is what produces this lesson's visible change.
-const LESSON_2_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
-h1 {
-  font-size: clamp(2rem, 7vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 1rem;
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-}
-p {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.92);
-  max-width: 36ch;
-  margin: 0 auto;
-}
-`).trim();
-
-// Lesson 5 stage: same vivid gradient as Lesson 1-3 so the learner's
-// JS-driven text change feels like a "magic" transformation on the
-// already familiar canvas. The default <h1> text shown via scaffold
-// is "かず"; the learner's 1 line rewrites it to whatever they want.
-const LESSON_5_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
-h1 {
-  font-size: clamp(2.5rem, 9vw, 6rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0;
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-}
-`).trim();
-
-// Lesson 4 stage: a lighter card-like canvas so the learner's
-// `color: ...` actually shows up dramatically. The default text colour
-// is intentionally black/dark so the "before/after" contrast is huge.
-const LESSON_4_PREVIEW_CSS = `
-body {
-  margin: 0;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #f8fafc;
-  color: #1f2937;
-  font-family: "Inter", "Noto Sans JP", system-ui, -apple-system, sans-serif;
-  text-align: center;
-  padding: 2rem;
-  box-sizing: border-box;
-}
-h1 {
-  font-size: clamp(2rem, 7vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 1rem;
-  color: black;
-}
-p {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-  line-height: 1.7;
-  color: #4b5563;
-  max-width: 36ch;
-  margin: 0 auto 1.25rem;
-}
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 auto;
-  max-width: 24ch;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-li {
-  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
-  line-height: 1.4;
-  color: #4b5563;
 }
 `.trim();
 
-// Lesson 3: adds list styling. Bullets removed for a cleaner card look,
-// items spaced and the whole list constrained to a readable width.
-const LESSON_3_PREVIEW_CSS = (BASE_PREVIEW_CSS + `
-h1 {
-  font-size: clamp(2rem, 7vw, 4.5rem);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin: 0 0 1rem;
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
-}
-p {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.92);
-  max-width: 36ch;
-  margin: 0 auto 1.25rem;
-}
-ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 auto;
-  max-width: 24ch;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-li {
-  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.92);
-}
-`).trim();
+const LESSON_1_PREVIEW_CSS = MINIMAL_PREVIEW_CSS;
+const LESSON_2_PREVIEW_CSS = MINIMAL_PREVIEW_CSS;
+const LESSON_3_PREVIEW_CSS = MINIMAL_PREVIEW_CSS;
+const LESSON_4_PREVIEW_CSS = MINIMAL_PREVIEW_CSS;
+const LESSON_5_PREVIEW_CSS = MINIMAL_PREVIEW_CSS;
 
 export const lessons: Lesson[] = [
   {
@@ -224,7 +103,7 @@ export const lessons: Lesson[] = [
     paid: false,
     title: "名前を画面に表示しよう",
     overview:
-      "HTML の `<h1>` タグを使って、画面に自分の名前を表示します。これだけで、こんなに綺麗な画面が作れるよ。",
+      "HTML の `<h1>` タグを使って、画面に自分の名前を表示します。まずは、自分が書いた文字が画面に出る瞬間を確かめよう。",
     concept: "<h1> タグで見出しを表示する",
     previewMode: "html",
     previewCss: LESSON_1_PREVIEW_CSS,
@@ -251,7 +130,7 @@ export const lessons: Lesson[] = [
         id: "1-3",
         title: "完成!",
         instruction:
-          "おめでとう!Lesson 1 クリアだ 🎉\n\n`<h1>` タグだけで、画面いっぱいの綺麗なデザインが作れたね。\n\n次は **自己紹介文** を追加して、もっとあなたらしいページにしよう。",
+          "おめでとう!Lesson 1 クリアだ 🎉\n\n`<h1>` タグで、自分が書いた名前を画面に表示できたね。\n\n次は **自己紹介文** を追加して、もっとあなたらしいページにしよう。",
         hintDefault: "",
       },
     ],
@@ -356,7 +235,7 @@ export const lessons: Lesson[] = [
     paid: false,
     title: "JavaScript で文字を変えよう",
     overview:
-      "JavaScript は **画面の中身を変える** 言語です。たった 1 行のコードで、表示されている文字を一瞬で書き換えてみよう。",
+      "JavaScript は **画面の中身を変える** 言語です。Lesson 4 と同じシンプルな画面で、今度は表示されている文字そのものを書き換えてみよう。",
     concept: "textContent で要素の文字を書き換える",
     previewMode: "html+css+js",
     editorLanguage: "javascript",
