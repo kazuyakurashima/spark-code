@@ -99,6 +99,11 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
   const [advanceNotice, setAdvanceNotice] = useState<
     { fromTitle: string; toStepId: string; toTitle: string } | null
   >(null);
+  // T28 — judge が通った直後の中間状態。学習者がこのステップで合格した
+  // ことを示し、次に出るボタンが「答え合わせする」から「次のステップに
+  // 進む」へ切り替わる。空文字 / null 時は通常モード。`handleAdvance` が
+  // 呼ばれたら null に戻す。
+  const [passedStepId, setPassedStepId] = useState<string | null>(null);
 
   const currentStep = lesson.steps[stepIndex];
   const isLastStep = stepIndex === lesson.steps.length - 1;
@@ -237,24 +242,15 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           content: resp.message,
         });
         if (resp.correct) {
-          // Advance the step immediately. praise is best-effort: judge is the
-          // source of truth, so a praise failure must NOT roll back progress.
+          // T28 — Don't auto-advance. Mark the step as passed so the
+          // panel surfaces an explicit "次のステップに進む →" CTA;
+          // the actual `setStepIndex` happens in `handleAdvance` when
+          // the learner clicks it. Praise is best-effort and still
+          // fires immediately (judge is the source of truth, so a
+          // praise failure must NOT roll back progress).
           const judgedStepId = currentStep.id;
           const judgedCode = code;
-          const fromStep = currentStep;
-          const nextIdx = Math.min(stepIndex + 1, lesson.steps.length - 1);
-          const toStep = lesson.steps[nextIdx];
-          setStepIndex(nextIdx);
-          // Only show the banner when we actually move to another step.
-          // Reaching the final step replaces the panel with the clear
-          // report, which is its own visible transition.
-          if (nextIdx !== stepIndex && nextIdx < lesson.steps.length - 1) {
-            setAdvanceNotice({
-              fromTitle: fromStep.title,
-              toStepId: toStep.id,
-              toTitle: toStep.title,
-            });
-          }
+          setPassedStepId(judgedStepId);
           callChat({ type: "praise", stepId: judgedStepId, code: judgedCode })
             .then((praiseResp) => {
               if (praiseResp.type === "praise") {
@@ -290,7 +286,32 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, isLastStep, currentStep, stepIndex, code, appendMessage, log, lesson.steps]);
+  }, [busy, isLastStep, currentStep, code, appendMessage, log]);
+
+  // T28 — explicit "次のステップに進む" handler. Fires only after a
+  // successful judge has set passedStepId. Bumps stepIndex (which
+  // triggers the step-transition useEffect to log step_completed /
+  // step_started / lesson_completed) and shows the larger
+  // advanceNotice card so the transition is unmissable. Going from
+  // the second-to-last step into the final step deliberately skips
+  // the banner — the LessonClearReport with confetti replaces the
+  // whole panel and is its own celebration.
+  const handleAdvance = useCallback(() => {
+    if (passedStepId !== currentStep.id) return;
+    const fromStep = currentStep;
+    const nextIdx = Math.min(stepIndex + 1, lesson.steps.length - 1);
+    if (nextIdx === stepIndex) return;
+    const toStep = lesson.steps[nextIdx];
+    setStepIndex(nextIdx);
+    setPassedStepId(null);
+    if (nextIdx < lesson.steps.length - 1) {
+      setAdvanceNotice({
+        fromTitle: fromStep.title,
+        toStepId: toStep.id,
+        toTitle: toStep.title,
+      });
+    }
+  }, [passedStepId, currentStep, stepIndex, lesson.steps]);
 
   const handleHint = useCallback(async () => {
     if (busy) return;
@@ -570,6 +591,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     setMessages([]);
     setStepIndex(0);
     setAdvanceNotice(null);
+    setPassedStepId(null);
     judgeAttemptsRef.current = {};
     hintRequestsRef.current = {};
     lessonStartedRef.current = false;
@@ -596,10 +618,12 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
             lesson={lesson}
             currentStepIndex={stepIndex}
             onJudge={handleJudge}
+            onAdvance={handleAdvance}
             isJudging={busy === "judge"}
             sessionId={log.sessionId}
             onRestart={handleRestart}
             advanceNotice={advanceNotice}
+            passedStepId={passedStepId}
           />
         }
         center={

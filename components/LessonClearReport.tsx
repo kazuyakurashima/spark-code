@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import type { Lesson } from "@/lib/lessons";
 import { lessons } from "@/lib/lessons";
 import type { Lesson1Report, Lesson1ReportResponse } from "@/types/report";
+import { Confetti } from "./Confetti";
 
 type Props = {
   /** 完了したレッスン本体。タイトルや次レッスン誘導文に使う。 */
@@ -180,9 +181,14 @@ export function LessonClearReport({ lesson, sessionId, onRestart }: Props) {
   const r = state.data;
 
   return (
-    <article className="rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-pink-500/15 p-6 text-slate-100 space-y-4">
+    <>
+      {/* T28 — レッスン全クリアの祝祭。LessonClearReport が ready で
+          描画される瞬間 = ちょうど lesson_completed の瞬間なので、
+          ここでだけ confetti を出す(中間ステップ通過は別の祝い方)。 */}
+      <Confetti pieces={70} />
+      <article className="rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-fuchsia-500/10 to-pink-500/15 p-6 text-slate-100 space-y-4 motion-safe:animate-[fade-in-down_400ms_ease-out_both]">
       <header className="text-center">
-        <p className="text-3xl mb-1" aria-hidden>
+        <p className="text-5xl mb-2 motion-safe:animate-[check-pop_600ms_ease-out_both]" aria-hidden>
           🎉
         </p>
         <h2 className="text-lg font-bold">
@@ -246,5 +252,6 @@ export function LessonClearReport({ lesson, sessionId, onRestart }: Props) {
         </button>
       </div>
     </article>
+    </>
   );
 }

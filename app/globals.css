@@ -30,6 +30,46 @@ body {
   }
 }
 
+/* T28 — 合格時の祝祭アニメ群。
+   ・confetti-fall: 画面上から落ちる紙吹雪。motion-reduce で抑制。
+   ・pass-pulse: 「次のステップへ進む」CTA に乗せて、ボタン自身が祝う。
+   ・check-pop: advanceNotice の 🎉 を一発スケールさせて視線を奪う。 */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pass-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* §11.6 / §6 Lesson 6 — 未来カードの "1 秒見せ" を循環パルスに翻訳。
    subtle に「もうすぐ手が届く」感だけ伝える(過剰アニメは避ける)。 */
 @keyframes future-card-pulse {
