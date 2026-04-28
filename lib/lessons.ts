@@ -68,6 +68,12 @@ export type Lesson = {
   scaffold?: LessonScaffold;
   /** レッスンを開いたときにエディタへ初期表示する内容。空ならエディタも空。 */
   starterCode?: string;
+  /**
+   * クリアレポートの末尾に出す「次の楽しみ」一文。次レッスンの予告。
+   * recap (Lesson 6 / 16) では使わない。最終レッスン(Lesson 16)も
+   * クロージング文は別経路なので未指定で OK。
+   */
+  nextHint?: string;
   steps: LessonStep[];
 };
 
@@ -222,6 +228,8 @@ export const lessons: Lesson[] = [
     concept: "<h1> タグで見出しを表示する",
     previewMode: "html",
     previewCss: LESSON_1_PREVIEW_CSS,
+    nextHint:
+      "次は、自己紹介文(`<p>` タグ)を追加して、もっとあなたらしいページにしてみよう。",
     steps: [
       {
         id: "1-1",
@@ -258,6 +266,8 @@ export const lessons: Lesson[] = [
     concept: "<p> タグで段落の文章を表示する",
     previewMode: "html",
     previewCss: LESSON_2_PREVIEW_CSS,
+    nextHint:
+      "次は、好きなものリスト(`<ul>` と `<li>`)で、自分らしさをもっと表してみよう。",
     starterCode: "<h1>かず</h1>\n",
     steps: [
       {
@@ -287,6 +297,8 @@ export const lessons: Lesson[] = [
     concept: "<ul> と <li> で項目のリストを作る",
     previewMode: "html",
     previewCss: LESSON_3_PREVIEW_CSS,
+    nextHint:
+      "次は、CSS で **色** を変えて、見た目に変化を出してみよう。`<style>` タグが初登場するよ。",
     starterCode: "<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n",
     steps: [
       {
@@ -316,6 +328,8 @@ export const lessons: Lesson[] = [
     concept: "<style> タグに CSS を書いて文字色を変える",
     previewMode: "html+css",
     previewCss: LESSON_4_PREVIEW_CSS,
+    nextHint:
+      "次は、JavaScript で **画面の文字を 1 行だけ書き換える** 体験をします。コードと画面が連動する感覚を、もう一段強く感じられるよ。",
     starterCode:
       "<style>\n\n</style>\n<h1>かず</h1>\n<p>水戸の塾で先生をしています</p>\n<ul>\n  <li>司馬遼太郎</li>\n  <li>歴史</li>\n  <li>ジャズ</li>\n</ul>\n",
     steps: [
@@ -355,6 +369,8 @@ export const lessons: Lesson[] = [
       beforeHtml: '<h1 id="name">かず</h1>',
       js: 'const name = document.querySelector("#name");',
     },
+    nextHint:
+      "次は、ここまでの 5 つを振り返る **1 周目クリア画面**。HTML / CSS / JavaScript / Sparkコーチの全体像を一気に見渡そう。",
     // 空。エディタは placeholder("ここに JavaScript を書いてみよう")で誘導。
     starterCode: "",
     steps: [

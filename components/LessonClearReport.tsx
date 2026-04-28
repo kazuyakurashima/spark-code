@@ -1,12 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import type { Lesson } from "@/lib/lessons";
+import { lessons } from "@/lib/lessons";
 import type { Lesson1Report, Lesson1ReportResponse } from "@/types/report";
 
 type Props = {
+  /** 完了したレッスン本体。タイトルや次レッスン誘導文に使う。 */
+  lesson: Lesson;
   sessionId: string;
   /** Called when the learner clicks "もう一度挑戦する". */
   onRestart: () => void;
+};
+
+const nextHintMarkdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => (
+    <p className="mb-0 last:mb-0 leading-relaxed">{children}</p>
+  ),
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="rounded bg-slate-900/80 px-1.5 py-0.5 font-mono text-[0.85em] text-pink-300">
+      {children}
+    </code>
+  ),
+  strong: ({ children }: { children?: React.ReactNode }) => (
+    <strong className="font-semibold text-white">{children}</strong>
+  ),
 };
 
 type FetchState =
@@ -47,7 +68,11 @@ function buildHintSentence(report: Lesson1Report): string {
   return `ヒントを ${h} 回使いながら、最後まで自分の手でゴール。`;
 }
 
-export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
+export function LessonClearReport({ lesson, sessionId, onRestart }: Props) {
+  // 次レッスンが Phase 3.1 内に存在するときだけナビボタンを出す。
+  // 6 までしか実装されていないので、L6 / L16 への "次へ" は recap や
+  // 共有画面が担当する想定。Phase 3.3 / 3.4 で順次解禁。
+  const nextLesson = lessons.find((l) => l.id === lesson.id + 1);
   const [state, setState] = useState<FetchState>({ kind: "loading" });
   // Bumping this re-runs the fetch effect — used for the "もう一度試す"
   // button when the lesson_completed insert is taking longer than our
@@ -160,7 +185,9 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
         <p className="text-3xl mb-1" aria-hidden>
           🎉
         </p>
-        <h2 className="text-lg font-bold">Lesson 1 クリア!おつかれさま!</h2>
+        <h2 className="text-lg font-bold">
+          Lesson {lesson.id} クリア!おつかれさま!
+        </h2>
         <p className="mt-1 text-xs text-slate-300">
           あなたは {r.completedSteps} / {r.totalSteps} ステップを完了しました。
         </p>
@@ -185,17 +212,39 @@ export function Lesson1ClearReport({ sessionId, onRestart }: Props) {
         </li>
       </ul>
 
-      <p className="text-sm text-slate-200 leading-relaxed border-t border-slate-700/40 pt-4">
-        次は、色と余白を変えて自分らしいカードにしてみましょう。
-      </p>
+      {lesson.nextHint && (
+        <div className="text-sm text-slate-200 leading-relaxed border-t border-slate-700/40 pt-4">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={nextHintMarkdownComponents}
+          >
+            {lesson.nextHint}
+          </ReactMarkdown>
+        </div>
+      )}
 
-      <button
-        type="button"
-        onClick={onRestart}
-        className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
-      >
-        もう一度挑戦する →
-      </button>
+      <div className="space-y-2">
+        {nextLesson && (
+          <Link
+            href={`/lesson/${nextLesson.id}`}
+            className="block w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white text-center shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
+          >
+            Lesson {nextLesson.id}「{nextLesson.title}」へ進む →
+          </Link>
+        )}
+        <button
+          type="button"
+          onClick={onRestart}
+          className={
+            // 次のレッスンがあるときは secondary、無いときは primary グラデ。
+            nextLesson
+              ? "w-full rounded-xl border border-slate-600/60 bg-slate-800/60 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800 hover:-translate-y-0.5"
+              : "w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-purple-500/40"
+          }
+        >
+          {nextLesson ? "もう一度このレッスンを試す" : "もう一度挑戦する →"}
+        </button>
+      </div>
     </article>
   );
 }

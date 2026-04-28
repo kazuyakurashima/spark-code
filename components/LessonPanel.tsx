@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Lesson } from "@/lib/lessons";
-import { Lesson1ClearReport } from "./Lesson1ClearReport";
+import { LessonClearReport } from "./LessonClearReport";
 
 const markdownComponents = {
   p: ({ children }: { children?: React.ReactNode }) => (
@@ -161,10 +161,11 @@ export function LessonPanel({
 
       {isLast && (
         <div className="mt-auto">
-          <Lesson1ClearReport sessionId={sessionId} onRestart={onRestart} />
-          <p className="mt-3 text-center text-xs text-slate-500">
-            次のレッスン(色・余白)は <span className="text-pink-300">Coming Soon</span>
-          </p>
+          <LessonClearReport
+            lesson={lesson}
+            sessionId={sessionId}
+            onRestart={onRestart}
+          />
         </div>
       )}
     </div>
