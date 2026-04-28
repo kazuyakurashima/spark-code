@@ -200,11 +200,19 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     return () => clearTimeout(id);
   }, [advanceNotice]);
 
-  // Wrap setCode so code edits flow into the throttled code_changed log.
+  // Wrap setCode so code edits flow into the throttled code_changed
+  // log. Editing also invalidates any "you passed, click 次へ" state:
+  // if the learner clears `passedStepId` we'd be letting them advance
+  // with broken code, so any keystroke after a pass forces them back
+  // to the "答え合わせする" CTA. The advance-notice banner from a
+  // *previous* step's transition is also dismissed here — once the
+  // learner is actively editing again, the celebration is stale.
   const handleCodeChange = useCallback(
     (next: string) => {
       setCode(next);
       log.codeChanged(currentStep.id, next.length);
+      setPassedStepId(null);
+      setAdvanceNotice(null);
     },
     [log, currentStep.id],
   );
@@ -218,7 +226,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
         role: "assistant",
         kind: "error",
         content:
-          "まずはエディタにコードを書いてみよう。書けたら「次のステップへ」を押してね。",
+          "まずはエディタにコードを書いてみよう。書けたら「答え合わせする」を押してね。",
       });
       return;
     }
