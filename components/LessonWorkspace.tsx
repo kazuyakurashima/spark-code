@@ -250,15 +250,37 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
           content: resp.message,
         });
         if (resp.correct) {
-          // T28 — Don't auto-advance. Mark the step as passed so the
-          // panel surfaces an explicit "次のステップに進む →" CTA;
-          // the actual `setStepIndex` happens in `handleAdvance` when
-          // the learner clicks it. Praise is best-effort and still
-          // fires immediately (judge is the source of truth, so a
-          // praise failure must NOT roll back progress).
+          // T28 — explicit 2-click for mid-lesson transitions so the
+          // learner can see what changed. Set passedStepId; the panel
+          // swaps to a green "🎉 次のステップに進む →" CTA, and the
+          // actual `setStepIndex` waits for the learner to click it.
+          //
+          // T28 follow-up (this block) — when the next step IS the
+          // clear screen (last index), the explicit-advance ceremony
+          // becomes a *delay* of the lesson-end celebration: the
+          // learner judged correctly and now wants to see "Lesson X
+          // クリア!" + confetti, not click another button to get
+          // there. Auto-advance directly so LessonClearReport fires
+          // immediately. Mid-lesson transitions (e.g. L1: 1-1 → 1-2)
+          // still use the 2-click flow since the next step is more
+          // work to do, not the clear destination.
+          //
+          // Praise is best-effort and fires either way. Judge is the
+          // source of truth so a praise failure must NOT roll back
+          // progress.
           const judgedStepId = currentStep.id;
           const judgedCode = code;
-          setPassedStepId(judgedStepId);
+          const isAdvancingToClearScreen =
+            stepIndex === lesson.steps.length - 2;
+          if (isAdvancingToClearScreen) {
+            setStepIndex(stepIndex + 1);
+            setPassedStepId(null);
+            // No advanceNotice here — entering the clear screen is
+            // its own visible transition (the panel swaps to
+            // LessonClearReport with confetti + report).
+          } else {
+            setPassedStepId(judgedStepId);
+          }
           callChat({ type: "praise", stepId: judgedStepId, code: judgedCode })
             .then((praiseResp) => {
               if (praiseResp.type === "praise") {
@@ -294,7 +316,7 @@ export function LessonWorkspace({ lessonId }: { lessonId: number }) {
     } finally {
       setBusy(null);
     }
-  }, [busy, isLastStep, currentStep, code, appendMessage, log]);
+  }, [busy, isLastStep, currentStep, code, appendMessage, log, lesson.steps.length, stepIndex]);
 
   // T28 — explicit "次のステップに進む" handler. Fires only after a
   // successful judge has set passedStepId. Bumps stepIndex (which
